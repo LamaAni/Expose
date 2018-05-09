@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2024
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSCom", "CSCom\CSCom.csproj", "{49B38700-4BD6-47CC-8353-BE6F231C79FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tester", "ConsoleApp1\Tester.csproj", "{15B54D0B-4681-4AE9-B7AD-563802B5F614}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{49B38700-4BD6-47CC-8353-BE6F231C79FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49B38700-4BD6-47CC-8353-BE6F231C79FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49B38700-4BD6-47CC-8353-BE6F231C79FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49B38700-4BD6-47CC-8353-BE6F231C79FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15B54D0B-4681-4AE9-B7AD-563802B5F614}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15B54D0B-4681-4AE9-B7AD-563802B5F614}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15B54D0B-4681-4AE9-B7AD-563802B5F614}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15B54D0B-4681-4AE9-B7AD-563802B5F614}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {39ACBEFD-95B7-4307-8721-4C333D8A3D08}
+	EndGlobalSection
+EndGlobal
