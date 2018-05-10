@@ -1,0 +1,3 @@
+[submodule "Com/WebsocketPipe"]
+	path = Com/WebsocketPipe
+	url = https://github.com/LamaAni/WebsocketPipe.git

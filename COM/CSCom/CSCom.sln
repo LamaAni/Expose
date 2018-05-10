@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tester", "ConsoleApp1\Teste
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestExpose", "TestExpose\TestExpose.csproj", "{6B0ECA4A-806E-462E-8BD8-F6057DF28D4E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebsocketPipeCS", "..\WebsocketPipe\WebsocketPipeCS\WebsocketPipeCS.csproj", "{1A7330F9-6056-41B7-BE23-9288F8141798}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{6B0ECA4A-806E-462E-8BD8-F6057DF28D4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B0ECA4A-806E-462E-8BD8-F6057DF28D4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B0ECA4A-806E-462E-8BD8-F6057DF28D4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A7330F9-6056-41B7-BE23-9288F8141798}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A7330F9-6056-41B7-BE23-9288F8141798}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A7330F9-6056-41B7-BE23-9288F8141798}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A7330F9-6056-41B7-BE23-9288F8141798}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

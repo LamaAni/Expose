@@ -41,12 +41,7 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
     <Reference Include="websocket-sharp-with-proxy-support, Version=1.0.2.28248, Culture=neutral, PublicKeyToken=5660b08a1845a91e, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\WebsocketPipe\WebsocketPipeCS\bin\Release\websocket-sharp-with-proxy-support.dll</HintPath>
-    </Reference>
-    <Reference Include="WebsocketPipeCS, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\WebsocketPipe\WebsocketPipeCS\bin\Release\WebsocketPipeCS.dll</HintPath>
+      <HintPath>..\packages\websocket-sharp-with-proxy-support.1.9.1\lib\net35-client\websocket-sharp-with-proxy-support.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -55,8 +50,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\WebsocketPipe\WebsocketPipeCS\WebsocketPipeCS.csproj">
+      <Project>{1a7330f9-6056-41b7-be23-9288f8141798}</Project>
+      <Name>WebsocketPipeCS</Name>
+    </ProjectReference>
     <ProjectReference Include="..\CSCom\CSCom.csproj">
       <Project>{49b38700-4bd6-47cc-8353-be6f231c79fc}</Project>
       <Name>CSCom</Name>
