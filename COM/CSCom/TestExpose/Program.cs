@@ -28,7 +28,7 @@ namespace TestExpose
                      if (log == null || log.Length == 0)
                          log = "[Kabba!!]";
 
-                     NPMessage rsp = Client.Send(NPMessageType.Data, "log",
+                     NPMessage rsp = Client.Send(NPMessageType.Warning, "log",
                          new NPMessageNamepathData()
                          {
                              Value = log,
@@ -62,11 +62,11 @@ namespace TestExpose
         {
             if (e.Message.MessageType == CSCom.NPMessageType.Error)
             {
-                Console.WriteLine("************************\nError recived from client:\n" + e.Message.Message);
+                Console.WriteLine("************************\nError recived from client:\n" + e.Message.Text);
                 return;
             }
 
-            Console.WriteLine("Client recived " + (e.Message.Message == null ? "Empty message." : "\"" + e.Message.Message + "\""));
+            Console.WriteLine("Client recived " + (e.Message.Text == null ? "Empty message." : "\"" + e.Message.Text + "\""));
         }
     }
 }
