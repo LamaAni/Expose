@@ -1,14 +1,14 @@
-classdef LVPortGlobals < AutoRemoveAutoIDMap
+classdef ExposePortGlobals < AutoRemoveAutoIDMap
     methods
-        function obj = LVPortGlobals(url)
+        function obj = ExposePortGlobals(url)
             % call base class constructor.
-            obj@AutoRemoveAutoIDMap(LVPortGlobals.PortAutoRemoveTime); % 5 minutes.
+            obj@AutoRemoveAutoIDMap(ExposePortGlobals.PortAutoRemoveTime); % 5 minutes.
             
             if(~exist('url','var'))
                 url=CSCom.DefaultURL;
             end
             
-            % generates and implemetns all the LVPort globals
+            % generates and implemetns all the ExposePort globals
             % that are required to identify ports by the thire names/ids
             obj.Server=CSCom(url);
             
@@ -55,8 +55,9 @@ classdef LVPortGlobals < AutoRemoveAutoIDMap
     
     methods(Access = protected)
         function OnMessageRecived(obj,s,e)
+
             % finding message info.
-            meta=strsplit(e.Message);
+            meta=strsplit(e.Message.Message,'@');
             portID=[];
             
             command=meta{1};
@@ -77,23 +78,29 @@ classdef LVPortGlobals < AutoRemoveAutoIDMap
         
         function OnCommand(obj,command,e)
             % general command translation.
-            data=e.UpdateObject();
+            data=e.Message.UpdateObject();
+            
             switch(command)
                 case "make"
                     if(~ischar(data))
-                        warning('Called to create an LVPort but not codepath was sent.');
+                        warning('Called to create an ExposePort but not codepath was sent.');
                         e.Response=false;
                         return;
                     end
-                    [po,LVPort.MakePort(data)
-                    %sLVPort.
+                    [po,compileErrors]=ExposePort.MakePort(data);
+                    e.Response=compileErrors;
                 case "destroy"
+                case "log"
+                    disp(data);
             end
         end
         
         function OnLog(obj,s,e)
-            disp(e.Data);
+            disp(e.Message);
         end
+    end
+    
+    methods (Static)
     end
 end
 

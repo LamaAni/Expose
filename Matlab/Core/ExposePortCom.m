@@ -1,9 +1,9 @@
-classdef LVPortCom < handle
-    %LVPORTCOM INTERNAL!! Methods for communication 
+classdef ExposePortCom < handle
+    %ExposePortCOM INTERNAL!! Methods for communication 
     
     % construction
     methods
-        function [obj]=LVPortCom()
+        function [obj]=ExposePortCom()
         end
     end
     
@@ -14,7 +14,7 @@ classdef LVPortCom < handle
     
     methods (Access = protected)     
         function [id]=InitializeRemote(p,id,comId)
-            id=LVPort.Global.setById(id,p);
+            id=ExposePort.Global.setById(id,p);
             p.ID=id;
             p.ComInitialized=true;
             p.ComId=comId;
@@ -152,7 +152,7 @@ classdef LVPortCom < handle
     end
         
     properties(Constant)
-        LVPortCom_PortObjectID=-2;
+        ExposePortCom_PortObjectID=-2;
     end
     
     % direct set namepath values to object properties.
@@ -162,11 +162,11 @@ classdef LVPortCom < handle
                 % making the map;
                 if(isa(ot.obj,'function_handle'))
                     ot.map=ot.obj();
-                    if(~isa(ot.map,'LVPortObjectMap'))
-                        ot.map=LVPortObjectMap(ObjectMap.mapToCollection(ot.map));
+                    if(~isa(ot.map,'ExposePortObjectMap'))
+                        ot.map=ExposePortObjectMap(ObjectMap.mapToCollection(ot.map));
                     end
                 else
-                    ot.map=LVPortObjectMap(ObjectMap.mapToCollection(ot.obj));
+                    ot.map=ExposePortObjectMap(ObjectMap.mapToCollection(ot.obj));
                 end
                 obj.TempObjects(id)=ot;
             end
@@ -174,7 +174,7 @@ classdef LVPortCom < handle
         
         function [id]=validateObjectID(obj,id)
             switch id
-                case LVPort.LVPortCom_PortObjectID
+                case ExposePort.ExposePortCom_PortObjectID
                     id='__portobject';
                     if(~obj.TempObjects.contains(id))
                         obj.SetTempObject(id,obj.PortObject);
@@ -235,7 +235,7 @@ classdef LVPortCom < handle
                 iargs={};
             end
             
-            nargs=lvport_nargout_for_class(obj.PortObject,name);
+            nargs=ExposePort_nargout_for_class(obj.PortObject,name);
             if(nargs==0)
                 exp.(name)(iargs{:});
                 return;

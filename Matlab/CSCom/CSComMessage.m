@@ -4,6 +4,9 @@ classdef CSComMessage <handle
 
     methods
         function obj = CSComMessage(msg,type,map,compareTo)
+            if(isa(msg,'string'))
+               msg=char(msg); 
+            end
             if(ischar(msg))
                 obj.Message=msg;
             else
@@ -13,13 +16,15 @@ classdef CSComMessage <handle
             if(isnumeric(type))
                 obj.MessageType=type;
             else
-                obj.MessageType=-1;
+                obj.MessageType=CSComMessageType.Data;
             end
             
-            if(exist('compareTo','var'))
-                obj.Namepaths=CSComMessageNamepathData.ToNamepathDataMap(map,compareTo);
-            else
-                obj.Namepaths=CSComMessageNamepathData.ToNamepathDataMap(map);
+            if(exist('map','var'))
+                if(exist('compareTo','var'))
+                    obj.Namepaths=CSComMessageNamepathData.ToNamepathDataMap(map,compareTo);
+                else
+                    obj.Namepaths=CSComMessageNamepathData.ToNamepathDataMap(map);
+                end
             end
         end
                 
@@ -27,27 +32,35 @@ classdef CSComMessage <handle
     
     properties(SetAccess = protected)
         Message=[];
-        MessageType=[];
+        MessageType=CSComMessageType.Data;
         Namepaths=[];
     end
     
     methods
         function msg=ToNetObject(obj)
             % collecting data.
-            for i=1:length(obj.Namepaths.values)
-                npd=obj.Namepaths.values{i};
-                csnpd=NPMessageNamepathData();
-                csnpd.Value=npd.Value;
-                csnps.Namepath=npd.Namepath;
-                csnps.Idxs=npd.Idxs;
-                csnps.Size=npd.Size;
+            if(~isempty(obj.Namepaths))
+
+                vals=obj.Namepaths.values;
+                data=NET.createArray('CSCom.NPMessageNamepathData',length(vals));
+                for i=1:length(vals)
+                    npd=vals{i};
+                    csnpd=CSCom.NPMessageNamepathData();
+                    csnpd.Value=npd.Value;
+                    csnpd.Namepath=npd.Namepath;
+                    csnpd.Idxs=npd.Idxs;
+                    csnpd.Size=npd.Size;
+                    data(i)=csnpd;
+                end
+            else
+                data=NET.createArray('CSCom.NPMessageNamepathData',0);
             end
-            mtype=8;
+            mtype=CSComMessageType.Error;
             if(~isempty(obj.MessageType))
                 mtype=obj.MessageType;
             end
             
-            msg=CSCom.NPMessage(mtype,csnpd,char(obj.Message));
+            msg=CSCom.NPMessage(int32(mtype),data,char(obj.Message));
         end
         
         function [o]=UpdateObject(obj,o)
@@ -62,15 +75,16 @@ classdef CSComMessage <handle
                 map=ObjectMap.mapToCollection(o);
             end
             
-            for i=1:length(obj.Namepaths.keys)
-                npd=obj.Namepaths.values(i);
+            vals=obj.Namepaths.values;
+            for i=1:length(vals)
+                npd=vals{i};
                 if(hasSource && map.isKey(npd.Namepath))
                     % need to update the source.
                     val=npd.GetValue(map(npd.Namepath));
                 else
                     val=npd.GetValue();
                 end
-                ObjectMap.update(o,npd.Namepath,val);
+                o=ExposeMapper.update(o,npd.Namepath,val);
             end
         end        
     end
@@ -81,7 +95,7 @@ classdef CSComMessage <handle
             % then send message.
             infos=nobj.NamePaths;
             map=containers.Map();
-            for i=1:length(infos)
+            for i=1:infos.Length
                 info=infos(i);
                 npd=CSComMessageNamepathData(...
                     CSCom.NetValueToRawData(info.Namepath),...
@@ -91,8 +105,9 @@ classdef CSComMessage <handle
                 map(npd.Namepath)=npd;
             end
             
-            o=CSComMessage(nobj.Message,...
-                int32(nobj.MessageType),map);    
+            o=CSComMessage(CSCom.NetValueToRawData(nobj.Message),...
+                CSComMessageType(int32(nobj.MessageType)),...
+                map);    
         end
     end
         

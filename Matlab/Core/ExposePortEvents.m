@@ -1,9 +1,9 @@
-classdef LVPortEvents < handle
-    %LVPORTEVENTS INTERNAL OBJECT!! allows port to use event posting
+classdef ExposePortEvents < handle
+    %ExposePortEVENTS INTERNAL OBJECT!! allows port to use event posting
     %system.
         
     methods
-        function [obj]=LVPortEvents()
+        function [obj]=ExposePortEvents()
            obj.Events=AutoRemoveAutoIDMap(5*60); 
         end
     end
@@ -29,7 +29,7 @@ classdef LVPortEvents < handle
                 evid=name;
             end
             
-            ev=LVPortEventStruct(name,cat,val);
+            ev=ExposePortEventStruct(name,cat,val);
             obj.Events(evid)=ev;
         end
         

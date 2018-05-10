@@ -1,8 +1,8 @@
-function p = mlvport(id)
+function p = getexposedPort(id)
     %MPORT get the Matlab port by its id.
-    if(~LVPort.Global.contains(id))
+    if(~Expose.Global.contains(id))
         error(['A matlab port with id "',id,'" not found']);
     end
-    p=LVPort.Global(id);
+    p=Expose.Global(id);
 end
 

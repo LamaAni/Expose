@@ -9,7 +9,6 @@ classdef LVPortEventStruct < handle
     end
     
     methods
-        
         function ev=LVPortEventStruct(name, cat, val)
             if(exist('name','var'))ev.Name=name;end
             if(exist('cat','var'))ev.Category=cat;end

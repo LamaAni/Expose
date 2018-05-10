@@ -1,9 +1,9 @@
-classdef LVPortObjectMap < handle
-    %LVPORTOBJECMAP An object map that represents the state of an object.
+classdef ExposePortObjectMap < handle
+    %ExposePortOBJECMAP An object map that represents the state of an object.
     %an object map cannot be uploaded.
     
     methods
-        function obj = LVPortObjectMap(omap,compareTo)
+        function obj = ExposePortObjectMap(omap,compareTo)
             obj.ValMap=omap;
             obj.ValInfoMap=containers.Map();
             if(exist('compareTo','var')&&isa(comapreTo,'containers.Map'))

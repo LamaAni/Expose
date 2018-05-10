@@ -16,7 +16,7 @@ namespace CSCom
         /// Create a new com service that can connect or listen at the comServiceAddress
         /// </summary>
         /// <param name="comServiceAddress">The addres of the service, the schema must be ws://. i.e. "ws://localhost:50000/CScom"</param>
-        public CSCom(string comServiceAddress = "ws://localhost:50000/CScom")
+        public CSCom(string comServiceAddress = "ws://localhost:50000/CSCom")
         {
             Pipe = new WebsocketPipe<NPMessage>(new Uri(comServiceAddress));
 
@@ -148,6 +148,29 @@ namespace CSCom
         #endregion
 
         #region Sending and reciving
+        /// <summary>
+        /// Sends a message and waits for response if needed.
+        /// </summary>
+        /// <param name="msg">The message to send</param>
+        /// <param name="requireResponse">If true a response will be required from the other party. Synchronius action.</param>
+        /// <param name="toWebsocket">If null then broadcase (as a server, this would mean sending to all clients)</param>
+        /// <returns>The response if required, otherwise null.</returns>
+        public NPMessage Send(NPMessageType type, string msg, NPMessageNamepathData data, bool requireResponse = false, string toWebsocket = null)
+        {
+            return Send(type, msg, data == null ? null : new NPMessageNamepathData[1] { data }, requireResponse, toWebsocket);
+        }
+
+        /// <summary>
+        /// Sends a message and waits for response if needed.
+        /// </summary>
+        /// <param name="msg">The message to send</param>
+        /// <param name="requireResponse">If true a response will be required from the other party. Synchronius action.</param>
+        /// <param name="toWebsocket">If null then broadcase (as a server, this would mean sending to all clients)</param>
+        /// <returns>The response if required, otherwise null.</returns>
+        public NPMessage Send(NPMessageType type, string msg, NPMessageNamepathData[] data, bool requireResponse = false, string toWebsocket = null)
+        {
+            return Send(new NPMessage(type, data, msg), requireResponse, toWebsocket);
+        }
 
         /// <summary>
         /// Sends a message and waits for response if needed.
@@ -158,6 +181,10 @@ namespace CSCom
         /// <returns>The response if required, otherwise null.</returns>
         public NPMessage Send(NPMessage msg, bool requireResponse = false, string toWebsocket = null)
         {
+            // empty string is null in this case.
+            if (toWebsocket!=null && toWebsocket.Length == 0)
+                toWebsocket = null;
+
             NPMessage response = null;
             if (requireResponse)
                 Pipe.Send(msg, toWebsocket, (rsp) =>

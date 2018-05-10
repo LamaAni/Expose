@@ -28,7 +28,7 @@ classdef CSComMessageNamepathData < handle
             end
         end
         
-        function [val]=GetValue(org)
+        function [val]=GetValue(obj,org)
             val=obj.Value;
             
             % nothing to do if not a value.
@@ -44,9 +44,8 @@ classdef CSComMessageNamepathData < handle
             end
             
             % reshaping the new value.
-            val=val(:);
-            if(~isempty(obj.Sizes))
-                val=reshape(val,obj.Sizes);
+            if(~isempty(obj.Size))
+                val=reshape(val(:),obj.Sizes);
             end
         end
     end
@@ -54,13 +53,13 @@ classdef CSComMessageNamepathData < handle
     methods(Static)
         function [map]=ToNamepathDataMap(map,compareTo)
             if(~isa(map,'containers.Map'))
-                map=ObjectMap.map(map);
+                map=ExposeMapper.mapToCollection(map);
             end
             hasCompTo=0;
             if(exist('compareTo','var'))
                 hasCompTo=1;
                 if(~isa(compareTo,'containers.Map'))
-                 compareTo=ObjectMap.map(compareTo);
+                 compareTo=ExposeMapper.mapToCollection(compareTo);
                 end
             end
             namepaths=map.keys;

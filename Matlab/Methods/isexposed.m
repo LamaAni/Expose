@@ -1,4 +1,4 @@
-function rt = mlvhasport(pid)
+function rt = isexposed(pid)
     rt=LVPort.Global.contains(pid);
 end
 

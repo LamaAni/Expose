@@ -1,9 +1,9 @@
-classdef LVPortProperties < handle
-    %LVPORTEVENTS INTERNAL OBJECT!! allows port to use properties update
+classdef ExposePortProperties < handle
+    %ExposePortEVENTS INTERNAL OBJECT!! allows port to use properties update
     %system.
             
     methods
-        function [obj]=LVPortProperties()
+        function [obj]=ExposePortProperties()
            obj.m_oldObjectCollection=AutoRemoveMap(5*60);
         end
     end
@@ -19,7 +19,7 @@ classdef LVPortProperties < handle
     end
     
     properties (Constant)
-        LVPortPropertiesEventCategory='lvport_m_properties';
+        ExposePortPropertiesEventCategory='ExposePort_m_properties';
     end
     
     methods
@@ -72,13 +72,13 @@ classdef LVPortProperties < handle
                 return;
             end
             
-            evid=LVPortProperties.MakeEventIDFromParameterName(name);
+            evid=ExposePortProperties.MakeEventIDFromParameterName(name);
             pID=obj.ID;
-            up=@()LVPortProperties.globcaller_getObjectPropertyMapByName(...
+            up=@()ExposePortProperties.globcaller_getObjectPropertyMapByName(...
                 pID,name,updateChanges);
             % category matlab prop
             obj.PostEvent('mupdate',up,...
-                LVPortProperties.LVPortPropertiesEventCategory,evid); 
+                ExposePortProperties.ExposePortPropertiesEventCategory,evid); 
         end
         
         function [map]=getObjectPropertyMapByName(obj,name,updateChanges)
@@ -91,7 +91,7 @@ classdef LVPortProperties < handle
             end
             omap=ObjectMap.mapToCollection(obj.PortObject.(name));
             omap('~pname')=name; % an invalide map info to allow us to get the name without another temp.
-            map=LVPortObjectMap(omap);
+            map=ExposePortObjectMap(omap);
             if(updateChanges)
                 if(obj.m_oldObjectCollection.contains(name))
                     map.minimizeUnchanged(obj.m_oldObjectCollection(name));
@@ -106,7 +106,7 @@ classdef LVPortProperties < handle
     
     methods (Access = private, Static)
         function [evid]=MakeEventIDFromParameterName(name)
-            evid=['lvport_param_update:',name];
+            evid=['ExposePort_param_update:',name];
         end
     end
     
@@ -116,7 +116,7 @@ classdef LVPortProperties < handle
                 % current port inactive?
                 return;
             end
-            p=mlvport(pID);
+            p=mExposePort(pID);
             map=p.getObjectPropertyMapByName(name,updateChanges);
         end        
     end

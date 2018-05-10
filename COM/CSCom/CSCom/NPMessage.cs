@@ -12,8 +12,16 @@ namespace CSCom
     [Serializable]
     public class NPMessage
     {
-
         #region Construction
+        /// <summary>
+        /// Make a JMessage from namepaths data
+        /// </summary>
+        /// <param name="namepaths"></param>
+        /// <param name="values"></param>
+        public NPMessage(int type, NPMessageNamepathData[] data, string message = null)
+            : this((NPMessageType)type, data, message)
+        {
+        }
 
         /// <summary>
         /// Make a JMessage from namepaths data
@@ -22,9 +30,12 @@ namespace CSCom
         /// <param name="values"></param>
         public NPMessage(NPMessageType type, NPMessageNamepathData[] data, string message = null)
         {
+            if (data == null)
+                data = new NPMessageNamepathData[0];
+
             m_NamePaths = data;
             Message = message;
-            MessageType = MessageType;
+            MessageType = type;
         }
 
         #endregion
@@ -34,8 +45,11 @@ namespace CSCom
         /// <summary>
         /// The message type.
         /// </summary>
-        public NPMessageType MessageType { get; private set; } = NPMessageType.AsString;
+        public NPMessageType MessageType { get; private set; } = NPMessageType.Data;
 
+        /// <summary>
+        /// The string message to send.
+        /// </summary>
         public string Message { get; private set; } = null;
 
         NPMessageNamepathData[] m_NamePaths;
@@ -73,8 +87,9 @@ namespace CSCom
 
     public enum NPMessageType : int
     {
-        Invoke = 1,
-        AsString = 2
+        Data = 1,
+        Error = 2,
+        Warning = 4
     }
 
     /// <summary>
@@ -91,7 +106,7 @@ namespace CSCom
         /// <summary>
         /// The idxs being sent, in the case of partial updates.
         /// </summary>
-        public int[] idxs;
+        public int[] Idxs;
 
         /// <summary>
         /// The the original size of the data sent, in case of a matrix.

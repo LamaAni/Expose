@@ -11,24 +11,26 @@ classdef CSCom < handle
                 end                
                 NET.addAssembly(assemblyLoc);
             end
-            NetO=CSCom.CSCom(url);
-            NetO.addlistener('Log',@obj.onLog);
-            NetO.addlistener('MessageRecived',@obj.onMessage);
+            obj.NetO=CSCom.CSCom(url);
+            obj.NetO.DoLogging=true;
+            obj.NetO.addlistener('Log',@obj.onLog);
+            obj.NetO.addlistener('MessageRecived',@obj.onMessage);
         end
     end
     
     properties(Constant)
-        DefaultURL='ws://localhost:50001/CSCom';
+        DefaultURL='ws://localhost:50000/CSCom';
     end
     
     properties
-        ShowLogs=false;
+        TraceLogs=false;
     end
     
     properties (SetAccess = private)
         NetO=[];
         LastResponceIndex=0;
         IsAlive=[];
+        
     end
     
     events
@@ -37,7 +39,6 @@ classdef CSCom < handle
     end
     
     methods
-        
         function [rt]=get.IsAlive(obj)
             rt=obj.NetO.IsAlive;
         end
@@ -54,15 +55,20 @@ classdef CSCom < handle
             obj.NetO.Stop();
         end
         
-        function [varargout]=Send(obj,msg,mtype,o)
+        function [varargout]=Send(obj,toId,msg,data,requireResponse)
             % making the message from the map.
             wasComMessage=true;
             if(~isa(msg,'CSComMessage'))
                 wasComMessage=false;
-                msg=CSComMessage.FromMatlabObj(msg,mtype,o);
+                if(~exist('data','var'))
+                    data=[];
+                end
+                msg=CSComMessage(msg,CSComMessageType.Data,data);
             end
-            requireResponse=nargout>0;
-            rsp=obj.NetO.Send(msg.ToNetObject(),requireResponse);
+            if(~exist('requireResponse','var'))
+                requireResponse=nargout>0;
+            end
+            rsp=obj.NetO.Send(msg.ToNetObject(),requireResponse,toId);
             if(~requireResponse)
                 return;
             end
@@ -83,13 +89,31 @@ classdef CSCom < handle
                 varargout(1)=ro;
             end
         end
+        
+        function NotifyError(obj,toID,msg)
+            if(~exist('msg','var'))
+                msg=toID;
+                toID='';
+            end
+            msg=CSComMessage(msg,CSComMessageType.Error);
+            obj.Send(toID,msg);
+        end
+        
+        function NotifyWarning(obj,toID,msg)
+            if(~exist('msg','var'))
+                msg=toID;
+                toID='';
+            end
+            msg=CSComMessage(msg,CSComMessageType.Warning);
+            obj.Send(toID,msg);
+        end
     end
     
     methods(Access = protected)
         function onLog(obj,s,e)
             msg=e.Message;
-            obj.notify('Log',EventStruct(msg));
-            if(obj.ShowLogs)
+            obj.notify('Log',CSComLogEventArgs(msg));
+            if(obj.TraceLogs)
                 disp(msg);
             end
         end
@@ -99,20 +123,55 @@ classdef CSCom < handle
                 return;
             end
             
-            msg=CSComMessage.FromNetObject(...
-                e.Message);
-            
-            obj.notify('MessageRecived',CSComMessageRecivedEventData(msg,...
-                e.WebsocketID,e.RequiresResponse));
-            
-            if(e.RequiresResponse)
-                obj.Send(e.Response);
+            try
+                msg=CSComMessage.FromNetObject(e.Message);
+                warning('');
+                obj.notify('MessageRecived',CSComMessageRecivedEventData(msg,...
+                    e.WebsocketID,e.RequiresResponse));
+
+                [emsg,wrnid]=lastwarn;
+                haserror=false;
+                haswarning=~isempty(wrnid);
+                if(haswarning)
+                    haserror=contains(wrnid,'error');
+                    haswarning=false;
+                end
+                if(e.RequiresResponse)
+                    if(~haserror)
+                        obj.Send(e.WebsocketID,"response",e.Response);
+                    else
+                        obj.NotifyError(e.WebsocketID,emsg);
+                    end
+                    
+                    if(haswarning)
+                        obj.NotifyWarning(e.WebsocketID,emsg);
+                    end
+                else
+                    if(haserror)
+                        obj.NotifyError(e.WebsocketID,emsg);
+                    elseif(haswarning)
+                        obj.NotifyWarning(e.WebsocketID,emsg);
+                    end
+                end
+            catch err
+                % send the error back to the server.
+                obj.NotifyError(e.WebsocketID,err.message);
+                % warn about the error.
+                warning(err.message);
             end
+        end
+    end
+    
+    methods
+        function delete(obj)
+            obj.NetO.Dispose();
+            obj.NetO=[];
         end
     end
 
     methods(Static)
         function [val]=NetValueToRawData(nval)
+            val=[];
             vc=class(nval);
             vc=lower(vc);
             if(contains(vc,'.boolean'))
@@ -148,9 +207,25 @@ classdef CSCom < handle
     methods(Static)
         function [apath]=GetAssemblyLocationFromCurrentFileLocation()
             fn=mfilename('fullpath');
-            apath=fileparts(fileparts(fileparts(fileparts(fn))));
-            apath=[apath,'\CSCom\CSCom\bin\Release\CSCom.dll'];
+            apath=fileparts(fileparts(fileparts(fn)));
+            apath=[apath,'\COM\CSCom\CSCom\bin\Release\CSCom.dll'];
             %disp(apath);
+        end
+    end
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Testing
+    
+    methods(Static)
+        function [server]=testAsServer()
+            server=CSCom();
+            server.TraceLogs=true;
+            server.addlistener('MessageRecived',@CSCom.testAsServerMessageListener);
+            server.addlistener('Log',@(s,e)disp(e.Message));
+            server.Listen();
+        end
+        
+        function testAsServerMessageListener(s,e)
         end
     end
 end

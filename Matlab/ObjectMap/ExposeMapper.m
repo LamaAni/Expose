@@ -1,4 +1,7 @@
-classdef ObjectMap < handle
+classdef ExposeMapper < handle
+    %ExposeMapper implements the exposition mapper to translate/update data
+    %from exposed seralizeation.
+    %Current implementation is on namepath, but should be changed to JSON.
     
     properties(Constant)
         ArraySeperator='!#!';
@@ -64,7 +67,7 @@ classdef ObjectMap < handle
         function [namePaths,vals] = map(o,basename,allowhandles)
             if(~exist('basename','var'))basename='';end
             if(~exist('allowhandles','var'))allowhandles=false;end
-            col=ObjectMap.mapToCollection(o,basename,allowhandles);
+            col=ExposeMapper.mapToCollection(o,basename,allowhandles);
             namePaths=col.keys;
             vals=col.values;
         end
@@ -74,7 +77,7 @@ classdef ObjectMap < handle
             if(~exist('allowhandles','var'))allowhandles=false;end
             if(~exist('basename','var'))basename='';end
             basename=strtrim(basename);
-            ObjectMap.parseObject(col,o,basename,allowhandles);
+            ExposeMapper.parseObject(col,o,basename,allowhandles);
         end
         
         % either updates or constructs a new object according to the map.
@@ -111,15 +114,15 @@ classdef ObjectMap < handle
             
             % updating object.
             for i=1:length(namePaths)
-                o=ObjectMap.update(o,namePaths{i},vals{i});
+                o=ExposeMapper.update(o,namePaths{i},vals{i});
             end
         end
         
         % update a sepcific value of an object given a namepath
         % and a value.
         function [o,wasUpdated]=update(o,namepath,val)
-            nameparts=ObjectMap.fastSplitPathSeperator(namepath);
-            [o,wasUpdated]=ObjectMap.updateByPath(o,nameparts,val,1);
+            nameparts=ExposeMapper.fastSplitPathSeperator(namepath);
+            [o,wasUpdated]=ExposeMapper.updateByPath(o,nameparts,val,1);
         end
         
         
@@ -128,15 +131,15 @@ classdef ObjectMap < handle
             hasval=0;
             hasType=0;
             if(exist('to','var'))
-                val=ObjectMap.getDefaultValue(to);
+                val=ExposeMapper.getDefaultValue(to);
                 hasType=1;
             else
                 val=[];
             end
             
-            nameparts=strsplit(namepath,ObjectMap.PathSeperator);
-            [v,hasval]=ObjectMap.findValue(o,nameparts,1);
-            if(hasType&&~strcmp(ObjectMap.getType(v),to))
+            nameparts=strsplit(namepath,ExposeMapper.PathSeperator);
+            [v,hasval]=ExposeMapper.findValue(o,nameparts,1);
+            if(hasType&&~strcmp(ExposeMapper.getType(v),to))
                 return;
             end
             
@@ -149,7 +152,7 @@ classdef ObjectMap < handle
     methods(Static, Access = protected)
 
         function [nameparts]=fastSplitPathSeperator(namepath)
-            idxs=find(namepath==ObjectMap.PathSeperator)-1;
+            idxs=find(namepath==ExposeMapper.PathSeperator)-1;
             if(isempty(idxs))
                 nameparts=cell(1,1);
                 nameparts{1}=namepath;
@@ -183,7 +186,7 @@ classdef ObjectMap < handle
             end
             
             % Geting the type of the object to check for.
-            to=ObjectMap.getType(o);
+            to=ExposeMapper.getType(o);
             namepart=nameparts{i};
 
             switch(to)
@@ -196,13 +199,13 @@ classdef ObjectMap < handle
                     if(idx<1 || length(o)<idx)
                         return;
                     end
-                    [rt,hasval]=ObjectMap.findValue(o{idx},nameparts,i+1);
+                    [rt,hasval]=ExposeMapper.findValue(o{idx},nameparts,i+1);
                 case 'sarray'
                     idx=str2num(namepart)+1;
                     if(idx==0 || length(o)<idx)
                         return;
                     end
-                    [rt,hasval]=ObjectMap.findValue(o(idx),nameparts,i+1);
+                    [rt,hasval]=ExposeMapper.findValue(o(idx),nameparts,i+1);
                 case 'object'
                     if(~isvarname(namepart))
                         % if the variables must be trucked (thire name)
@@ -213,7 +216,7 @@ classdef ObjectMap < handle
                     if(~isfield(o,namepart))
                         return;
                     end
-                    [rt,hasval]=ObjectMap.findValue(o.(namepart),nameparts,i+1);
+                    [rt,hasval]=ExposeMapper.findValue(o.(namepart),nameparts,i+1);
                 otherwise
                    if(length(nameparts)==i)
                        rt=o;
@@ -246,11 +249,11 @@ classdef ObjectMap < handle
             end
             
             % check if next is an index.
-            isArrayIndex=ObjectMap.isNamePartAnArrayIndex(nameparts,i);
+            isArrayIndex=ExposeMapper.isNamePartAnArrayIndex(nameparts,i);
             namepart=nameparts{i};
             
             % checking if the current object matches the needed value type.
-            to=ObjectMap.getType(o);
+            to=ExposeMapper.getType(o);
             if(isArrayIndex)
                 % expecting an array.
                 idx=str2num(namepart)+1;   
@@ -265,7 +268,7 @@ classdef ObjectMap < handle
                             ival=o(idx);
                         end
                         
-                        [ival,wasUpdated]=ObjectMap.updateByPath(ival,nameparts,val,i+1);
+                        [ival,wasUpdated]=ExposeMapper.updateByPath(ival,nameparts,val,i+1);
                         o(idx)=ival;
                     otherwise
                         ival=[];
@@ -278,13 +281,13 @@ classdef ObjectMap < handle
                             o={};
                         end
 
-                        [ival,wasUpdated]=ObjectMap.updateByPath(ival,nameparts,val,i+1);
+                        [ival,wasUpdated]=ExposeMapper.updateByPath(ival,nameparts,val,i+1);
                         o{idx}=ival;
                         return;
                 end
             else
                 % should be an object (otherwise already dealt with;
-                isAnArray=ObjectMap.isNamePartAnArrayIndex(nameparts,i+1);
+                isAnArray=ExposeMapper.isNamePartAnArrayIndex(nameparts,i+1);
                 updateToSelf=isempty(namepart);
                 
                 if(~isvarname(namepart))
@@ -305,7 +308,7 @@ classdef ObjectMap < handle
                     ival=o;
                 elseif(isfield(o,namepart)||isprop(o,namepart))
                     ival=o.(namepart);
-                    to=ObjectMap.getType(ival);
+                    to=ExposeMapper.getType(ival);
                 else
                     ival=struct();
                     to='object';
@@ -327,16 +330,16 @@ classdef ObjectMap < handle
                 end
                 
                 if(updateToSelf)
-                    [o,wasUpdated]=ObjectMap.updateByPath(ival,nameparts,val,i+1); 
+                    [o,wasUpdated]=ExposeMapper.updateByPath(ival,nameparts,val,i+1); 
                 else
-                    [o.(namepart),wasUpdated]=ObjectMap.updateByPath(ival,nameparts,val,i+1); 
+                    [o.(namepart),wasUpdated]=ExposeMapper.updateByPath(ival,nameparts,val,i+1); 
                 end
             end  
         end
         
         % recursive call to update an object.
         function parseObject(col,o,basename,allowhandles)
-            t=ObjectMap.getType(o);
+            t=ExposeMapper.getType(o);
             
             switch(t)
                 case 'unconvertable'
@@ -347,34 +350,34 @@ classdef ObjectMap < handle
                         return; % nothing to do.
                     end
                     if(~isempty(basename))
-                        basename=[basename,ObjectMap.PathSeperator];
+                        basename=[basename,ExposeMapper.PathSeperator];
                     end                 
                     l=numel(o);
                     for i=1:l
                         % note -1 is since matlab index start from 1
                         % and we want to convert to another lang. 
                         newname=[basename,num2str(i-1)];
-                        ObjectMap.parseObject(col,o{i},newname,allowhandles);
+                        ExposeMapper.parseObject(col,o{i},newname,allowhandles);
                     end
                 case 'sarray'
                     if(isempty(o))
                         return; % nothing to do.
                     end
                     if(~isempty(basename))
-                        basename=[basename,ObjectMap.PathSeperator];
+                        basename=[basename,ExposeMapper.PathSeperator];
                     end          
                     l=numel(o);
                     for i=1:l
                         % note -1 is since matlab index start from 1
                         % and we want to convert to another lang.
                         newname=[basename,num2str(i-1)];
-                        ObjectMap.parseObject(col,o(i),newname,allowhandles);
+                        ExposeMapper.parseObject(col,o(i),newname,allowhandles);
                     end
                 case 'object'                                
 
                     
                     if(~isempty(basename))
-                        basename=[basename,ObjectMap.PathSeperator];
+                        basename=[basename,ExposeMapper.PathSeperator];
                     end
                     om=fieldnames(o);
                     for i=1:length(om)
@@ -383,7 +386,7 @@ classdef ObjectMap < handle
                             % do not allow internal handles.
                             return;
                         end  
-                        ObjectMap.parseObject(col,o.(fn),[basename,fn],allowhandles);
+                        ExposeMapper.parseObject(col,o.(fn),[basename,fn],allowhandles);
                     end        
                 otherwise
                     % string or number. (but a value).
@@ -403,7 +406,7 @@ classdef ObjectMap < handle
             
             tic;
             for i=1:n
-                o=ObjectMap.update(o,namepath,val);
+                o=ExposeMapper.update(o,namepath,val);
             end
             totalT=toc;
             disp(['Total set time (single): ',num2str(totalT*1000./n),' [ms]']);            
