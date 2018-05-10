@@ -1,4 +1,5 @@
-classdef CSComMessageType<int32
+classdef ExposeMessageType<int32
+    %ExposeMessageType the type of the message to be translated.
     enumeration
         Error(1)
         Warning(2)

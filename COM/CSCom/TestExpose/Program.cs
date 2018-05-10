@@ -38,7 +38,7 @@ namespace TestExpose
                      if (rsp == null)
                          return;
 
-                     Console.WriteLine("Expose has responded with: " + rsp.Message == null ? "[UNKNOWN!]" : rsp.Message);
+                     Console.WriteLine("Expose has responded with: " + rsp.Text == null ? "[UNKNOWN!]" : rsp.Text);
                  });
 
             

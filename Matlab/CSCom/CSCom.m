@@ -1,22 +1,43 @@
-classdef CSCom < handle
+classdef CSCom < ExposeCOM
     %CSCOM Implements the websocket connection module to be used
     methods
-        function obj = CSCom(url,assemblyLoc)
-            if(~exist('url','var'))
-                url=CSCom.DefaultURL;
-            end
+        function obj = CSCom(assemblyLoc)
             if(isempty(which('CSCom.CSCom')))
                 if(~exist('assemblyLoc','var'))
                     assemblyLoc=CSCom.GetAssemblyLocationFromCurrentFileLocation();
-                end                
+                end
                 NET.addAssembly(assemblyLoc);
             end
+        end
+    end
+
+    
+    % abstract class implementations
+    properties(SetAccess = private)
+        Url=[];
+    end
+    
+    methods
+        function Init(obj,url)
+            if(~exist('url','var'))
+                url=CSCom.DefaultURL;
+            end
+            
+            obj.Url=url;
             obj.NetO=CSCom.CSCom(url);
             obj.NetO.DoLogging=true;
             obj.NetO.addlistener('Log',@obj.onLog);
-            obj.NetO.addlistener('MessageRecived',@obj.onMessage);
+            obj.NetO.addlistener('MessageRecived',@obj.onMessage);            
         end
-    end
+        
+        function Listen(obj)
+            obj.NetO.Listen();
+        end
+        
+        function Connect(obj)
+            obj.NetO.Connect();
+        end
+    end    
     
     properties(Constant)
         DefaultURL='ws://localhost:50000/CSCom';
@@ -33,22 +54,9 @@ classdef CSCom < handle
         
     end
     
-    events
-        Log;
-        MessageRecived;
-    end
-    
     methods
         function [rt]=get.IsAlive(obj)
             rt=obj.NetO.IsAlive;
-        end
-        
-        function Listen(obj)
-            obj.NetO.Listen();
-        end
-        
-        function Connect(obj)
-            obj.NetO.Connect();
         end
         
         function Stop(obj)
@@ -112,7 +120,7 @@ classdef CSCom < handle
     methods(Access = protected)
         function onLog(obj,s,e)
             msg=e.Message;
-            obj.notify('Log',CSComLogEventArgs(msg));
+            obj.notify('Log',ExposeLogEventStruct(msg));
             if(obj.TraceLogs)
                 disp(msg);
             end
@@ -125,8 +133,11 @@ classdef CSCom < handle
             
             try
                 msg=CSComMessage.FromNetObject(e.Message);
-                warning('');
-                obj.notify('MessageRecived',CSComMessageRecivedEventData(msg,...
+                
+                lastwarn(''); %reset the state of the last warning.
+                
+                % call the event.
+                obj.notify('MessageRecived',ExposeMessageEventStruct(msg,...
                     e.WebsocketID,e.RequiresResponse));
 
                 [emsg,wrnid]=lastwarn;

@@ -45,7 +45,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CSCom.cs" />
-    <Compile Include="CSComSerrogateSelector.cs" />
     <Compile Include="NPMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -13,6 +13,7 @@ namespace CSCom
     public class NPMessage
     {
         #region Construction
+
         /// <summary>
         /// Make a JMessage from namepaths data
         /// </summary>
@@ -34,7 +35,7 @@ namespace CSCom
                 data = new NPMessageNamepathData[0];
 
             m_NamePaths = data;
-            Message = message;
+            Text = message;
             MessageType = type;
         }
 
@@ -45,12 +46,12 @@ namespace CSCom
         /// <summary>
         /// The message type.
         /// </summary>
-        public NPMessageType MessageType { get; private set; } = NPMessageType.Data;
+        public NPMessageType MessageType { get; private set; } = NPMessageType.Warning;
 
         /// <summary>
         /// The string message to send.
         /// </summary>
-        public string Message { get; private set; } = null;
+        public string Text { get; private set; } = null;
 
         NPMessageNamepathData[] m_NamePaths;
 
@@ -85,6 +86,9 @@ namespace CSCom
         #endregion
     }
 
+    /// <summary>
+    /// Definitions of the compound 
+    /// </summary>
     public enum NPMessageType : int
     {
 

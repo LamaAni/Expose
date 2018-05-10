@@ -1,22 +1,27 @@
-classdef CSComMessage <handle
+classdef CSComMessage < ExposeMessage
     %CSCOMMESSAGE Summary of this class goes here
     %   Detailed explanation goes here
 
     methods
-        function obj = CSComMessage(msg,type,map,compareTo)
-            if(isa(msg,'string'))
-               msg=char(msg); 
-            end
-            if(ischar(msg))
-                obj.Message=msg;
+        function obj = CSComMessage(txt,type,map,compareTo)
+            if(exist('txt','var'))
+                if(isa(txt,'string'))
+                   txt=char(txt); 
+                end
+
+                if(ischar(txt))
+                    obj.Text=txt;
+                else
+                    obj.Text=[];
+                end
             else
-                obj.Message=[];
+                obj.Text=[];
             end
             
-            if(isnumeric(type))
+            if(exist('type','var') && isa(type,'ExposeMessageType'))
                 obj.MessageType=type;
             else
-                obj.MessageType=CSComMessageType.Data;
+                obj.MessageType=ExposeMessageType.Warning;
             end
             
             if(exist('map','var'))
@@ -30,13 +35,53 @@ classdef CSComMessage <handle
                 
     end
     
+    % anstract implementation
+    methods
+        
+        % returns the value of the current message in matlab format.
+        function [o]=Value(obj)
+            o=obj.SetTo([]);
+        end
+        
+        % sets the value of the current message to a specific object.
+        function [o]=SetTo(obj,o)
+            % update or make the object from the namepath.
+            hasSource=true;
+            if(~exist('o','var'))
+                o=[];% new source object.
+                hasSource=false;
+            end
+            
+            if(hasSource)
+                map=ObjectMap.mapToCollection(o);
+            end
+            
+            vals=obj.Namepaths.values;
+            for i=1:length(vals)
+                npd=vals{i};
+                if(hasSource && map.isKey(npd.Namepath))
+                    % need to update the source.
+                    val=npd.GetValue(map(npd.Namepath));
+                else
+                    val=npd.GetValue();
+                end
+                o=ExposeMapper.update(o,npd.Namepath,val);
+            end
+        end
+        
+        % get the value of properties, in the form of an object from the
+        % message namepath values.
+        function [o]=GetFrom(obj,from)
+            
+        end
+    end
+    
     properties(SetAccess = protected)
-        Message=[];
-        MessageType=CSComMessageType.Data;
         Namepaths=[];
     end
     
     methods
+        % convert the current to a .net object, so it can be sent.
         function msg=ToNetObject(obj)
             % collecting data.
             if(~isempty(obj.Namepaths))
@@ -60,36 +105,13 @@ classdef CSComMessage <handle
                 mtype=obj.MessageType;
             end
             
-            msg=CSCom.NPMessage(int32(mtype),data,char(obj.Message));
+            msg=CSCom.NPMessage(int32(mtype),data,char(obj.Text));
         end
-        
-        function [o]=UpdateObject(obj,o)
-            % update or make the object from the namepath.
-            hasSource=true;
-            if(~exist('o','var'))
-                o=[];% new source object.
-                hasSource=false;
-            end
-            
-            if(hasSource)
-                map=ObjectMap.mapToCollection(o);
-            end
-            
-            vals=obj.Namepaths.values;
-            for i=1:length(vals)
-                npd=vals{i};
-                if(hasSource && map.isKey(npd.Namepath))
-                    % need to update the source.
-                    val=npd.GetValue(map(npd.Namepath));
-                else
-                    val=npd.GetValue();
-                end
-                o=ExposeMapper.update(o,npd.Namepath,val);
-            end
-        end        
+    
     end
     
     methods(Static)
+        % convert a .net object to a matlab object so it can be handled.
         function [o]=FromNetObject(nobj)
             % need to convert message to message map.
             % then send message.
@@ -105,7 +127,7 @@ classdef CSComMessage <handle
                 map(npd.Namepath)=npd;
             end
             
-            o=CSComMessage(CSCom.NetValueToRawData(nobj.Message),...
+            o=CSComMessage(CSCom.NetValueToRawData(nobj.Text),...
                 CSComMessageType(int32(nobj.MessageType)),...
                 map);    
         end
