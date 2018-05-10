@@ -87,9 +87,14 @@ namespace CSCom
 
     public enum NPMessageType : int
     {
-        Data = 1,
-        Error = 2,
-        Warning = 4
+
+        Error = 1,
+        Warning = 2,
+        Create = 4,
+        Destroy = 8,
+        Invoke = 16,
+        Get = 32,
+        Set = 64,
     }
 
     /// <summary>

@@ -1,8 +1,12 @@
 classdef CSComMessageType<int32
-   enumeration
-      Data(1)
-      Error(2)
-      Warning(4);
-   end
+    enumeration
+        Error(1)
+        Warning(2)
+        Create(4)
+        Destroy(8)
+        Invoke(16)
+        Get(32)
+        Set(64)
+    end
 end
 
