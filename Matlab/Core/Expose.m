@@ -25,6 +25,34 @@ classdef Expose<handle
         Handlers=[];
     end
     
+    % general com methods
+    methods
+        % listen for remote connections. (Blocks the port).
+        function Listen(obj,varargin)
+            if(obj.Com.IsAlive)
+                error("This expose is already connected or listening.");
+            end
+            obj.Com.Init(varargin{:});
+            obj.Com.Listen;
+        end
+        
+        % connect to a remote and listen for connections.
+        function Connect(obj,varargin)
+            if(obj.Com.IsAlive)
+                error("This expose is already connected or listening.");
+            end
+            obj.Com.Init(varargin{:});
+            obj.Com.Connect();
+        end
+        
+        % stop listenting/disconnect.
+        function Stop(obj)
+            if(obj.Com.IsAlive)
+                obj.Com.Stop();
+            end
+        end
+    end
+    
     % messaging
     methods(Access = protected)
         function onMessage(obj,s,e)
@@ -37,21 +65,21 @@ classdef Expose<handle
             % parameters.
             switch(e.Message.MessageType)
                 case ExposeMessageType.Error
-                    error(e.Text);
+                    error('Expose:ServerError',e.Message.Text);
                 case ExposeMessageType.Warning
-                    warning(e.Text);
+                    warning('Expose:ServerWarning',e.Message.Text);
                 case ExposeMessageType.Create
                     obj.CreateHandler(e.CallerID,e);
                 case ExposeMessageType.Destroy
                     obj.DestroyHandler(e.CallerID,e);
                 case ExposeMessageType.Get
-                    hndl=obj.GetHanlder(e.CallerID,e);
+                    hndl=obj.GetHandler(e.CallerID,e);
                     e.Response=e.Message.GetFrom(hndl);
                 case ExposeMessageType.Set
-                    hndl=obj.GetHanlder(e.CallerID,e);
+                    hndl=obj.GetHandler(e.CallerID,e);
                     e.Message.SetTo(hndl);
                 case ExposeMessageType.Invoke
-                    hndl=obj.GetHanlder(e.CallerID,e);
+                    hndl=obj.GetHandler(e.CallerID,e);
                     % in this case the text must be the 
                     % function name.
                     if(ismethod(hndl,e.Message.Text))
@@ -64,12 +92,12 @@ classdef Expose<handle
                             e.Response=hndl.(e.Message.Text)(args(:));
                         elseif(nao>1)
                             e.Response=cell(1,nao);
-                            e.Response(:)=hndl.(e.Message.Text)(args(:));
+                            e.Response{:}=hndl.(e.Message.Text)(args(:));
                         else
                             hndl.(e.Message.Text)(args(:));
                         end
                     else
-                        error(['Function "',e.Message.Text,'" not found. Function invoke failed.');
+                        error(['Function "',e.Message.Text,'" not found. Function invoke failed.']);
                     end
             end
         end

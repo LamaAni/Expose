@@ -6,6 +6,10 @@ classdef ExposeCOM<handle
         MessageRecived;
     end
     
+    properties(Abstract, SetAccess = protected)
+        IsAlive;
+    end
+    
     methods (Abstract)
         Init(obj,url);
         Listen(obj);

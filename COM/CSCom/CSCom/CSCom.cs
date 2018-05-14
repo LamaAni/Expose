@@ -30,6 +30,25 @@ namespace CSCom
             {
                 if (this.MessageRecived != null)
                     this.MessageRecived(this, e);
+
+                if(this.ASynchroniusEventExecution && e.RequiresResponse)
+                {
+                    e.WaitForAsynchroniusEvent(true, ASynchroniusEventExecutionTimeout);
+                }
+            };
+
+            Pipe.Close += (s, e) =>
+            {
+                if (this.MessageRecived == null)
+                    return;
+
+                NPMessage closeMsg = new NPMessage(NPMessageType.Destroy, null, e.WebsocketID);
+
+                // replace me message object and send on.
+                e.Message = closeMsg;
+
+                // Call the close message.
+                this.MessageRecived(this, e);
             };
         }
 
@@ -80,6 +99,17 @@ namespace CSCom
         /// True if a server
         /// </summary>
         public bool IsServer { get { return Pipe != null && Pipe.WSServer != null; } }
+
+        /// <summary>
+        /// True if the current executing framework dose asynchronius event execution.
+        /// This will affect the wait when requiring a response.
+        /// </summary>
+        public bool ASynchroniusEventExecution { get; set; } = false;
+
+        /// <summary>
+        /// The timeout to wait when doing async event execution.
+        /// </summary>
+        public int ASynchroniusEventExecutionTimeout { get; set; } = 10000;
 
         #endregion
 
@@ -147,7 +177,23 @@ namespace CSCom
 
         #endregion
 
-        #region Sending and reciving
+        #region Specialized operations
+
+        public NPMessage Get(string namepath)
+        {
+            return Get(new string[] { namepath });
+        }
+
+        public NPMessage Get(string[] namepaths)
+        {
+            NPMessageNamepathData[] data = namepaths.Select(np => new NPMessageNamepathData(np)).ToArray();
+            return Send(NPMessageType.Get, "", data, true);
+        }
+
+        #endregion
+
+        #region Core send commands
+
         /// <summary>
         /// Sends a message and waits for response if needed.
         /// </summary>

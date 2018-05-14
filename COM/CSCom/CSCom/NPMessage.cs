@@ -53,8 +53,24 @@ namespace CSCom
         /// </summary>
         public string Text { get; private set; } = null;
 
-        NPMessageNamepathData[] m_NamePaths;
+        /// <summary>
+        /// True if has any namepaths
+        /// </summary>
+        public int NamepathsCount
+        {
+            get
+            {
+                if (m_NamePaths == null)
+                    return 0;
+                return m_NamePaths.Length;
+            }
+        }
 
+
+        NPMessageNamepathData[] m_NamePaths;
+        /// <summary>
+        /// The data collection in the form of namepaths.
+        /// </summary>
         public NPMessageNamepathData[] NamePaths
         {
             get { return m_NamePaths; }
@@ -91,7 +107,6 @@ namespace CSCom
     /// </summary>
     public enum NPMessageType : int
     {
-
         Error = 1,
         Warning = 2,
         Create = 4,
@@ -99,6 +114,7 @@ namespace CSCom
         Invoke = 16,
         Get = 32,
         Set = 64,
+        Response=128,
     }
 
     /// <summary>
@@ -107,20 +123,20 @@ namespace CSCom
     [Serializable]
     public class NPMessageNamepathData
     {
+        public NPMessageNamepathData()
+        {
+        }
+
+        public NPMessageNamepathData(string namepath, object value=null)
+        {
+            Namepath = namepath;
+            Value = value;
+        }
+
         /// <summary>
         /// The value of the namepath
         /// </summary>
         public object Value;
-
-        /// <summary>
-        /// The idxs being sent, in the case of partial updates.
-        /// </summary>
-        public int[] Idxs;
-
-        /// <summary>
-        /// The the original size of the data sent, in case of a matrix.
-        /// </summary>
-        public int[] Size;
 
         /// <summary>
         /// The namepath of the object.

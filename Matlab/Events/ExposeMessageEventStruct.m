@@ -3,7 +3,7 @@ classdef (ConstructOnLoad) ExposeMessageEventStruct < event.EventData & handle
     %   Detailed explanation goes here
 
     methods
-        function ev=ExposeMessageEventStruct(callerID,msg)  
+        function ev=ExposeMessageEventStruct(callerID,msg,requireResponse)  
             % messages should be of type ExposeMessage.
             if(isa(callerID,'string'))
                 callerID=char(callerID);
@@ -16,8 +16,13 @@ classdef (ConstructOnLoad) ExposeMessageEventStruct < event.EventData & handle
                 error('Exposure messages must implement ExposeMessage');
             end
             
+            if(~islogical(requireResponse))
+                error('Require response must be either false or true.');
+            end
+            
             ev.CallerID=callerID;
             ev.Message=msg;
+            ev.RequiresResponse=requireResponse;
         end
     end
     
@@ -25,6 +30,11 @@ classdef (ConstructOnLoad) ExposeMessageEventStruct < event.EventData & handle
         % the id of the caller.
         CallerID='';
         Message=[];
+        RequiresResponse=false;
     end    
+    
+    properties
+        Response=[];
+    end
 end
 

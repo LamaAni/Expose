@@ -72,7 +72,18 @@ classdef CSComMessage < ExposeMessage
         % get the value of properties, in the form of an object from the
         % message namepath values.
         function [o]=GetFrom(obj,from)
-            
+            % creating the new map.
+            if(isempty(obj.Namepaths))
+                o=[];
+                return;
+            end
+            o=struct();
+            vals=obj.Namepaths.values;
+            for i=1:length(vals)
+                np=vals{i}.Namepath;
+                val=ExposeMapper.getValueFromNamepath(from,np);
+                o=ExposeMapper.update(o,np,val);
+            end
         end
     end
     
@@ -85,7 +96,6 @@ classdef CSComMessage < ExposeMessage
         function msg=ToNetObject(obj)
             % collecting data.
             if(~isempty(obj.Namepaths))
-
                 vals=obj.Namepaths.values;
                 data=NET.createArray('CSCom.NPMessageNamepathData',length(vals));
                 for i=1:length(vals)
@@ -100,11 +110,10 @@ classdef CSComMessage < ExposeMessage
             else
                 data=NET.createArray('CSCom.NPMessageNamepathData',0);
             end
-            mtype=CSComMessageType.Error;
+            mtype=ExposeMessageType.Error;
             if(~isempty(obj.MessageType))
                 mtype=obj.MessageType;
             end
-            
             msg=CSCom.NPMessage(int32(mtype),data,char(obj.Text));
         end
     
@@ -128,8 +137,8 @@ classdef CSComMessage < ExposeMessage
             end
             
             o=CSComMessage(CSCom.NetValueToRawData(nobj.Text),...
-                CSComMessageType(int32(nobj.MessageType)),...
-                map);    
+                ExposeMessageType(int32(nobj.MessageType)),...
+                map);
         end
     end
         

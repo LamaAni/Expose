@@ -13,8 +13,9 @@ classdef CSCom < ExposeCOM
 
     
     % abstract class implementations
-    properties(SetAccess = private)
+    properties(SetAccess = protected)
         Url=[];
+        IsAlive=[];
     end
     
     methods
@@ -26,6 +27,7 @@ classdef CSCom < ExposeCOM
             obj.Url=url;
             obj.NetO=CSCom.CSCom(url);
             obj.NetO.DoLogging=true;
+            obj.NetO.ASynchroniusEventExecution=true;
             obj.NetO.addlistener('Log',@obj.onLog);
             obj.NetO.addlistener('MessageRecived',@obj.onMessage);            
         end
@@ -50,12 +52,15 @@ classdef CSCom < ExposeCOM
     properties (SetAccess = private)
         NetO=[];
         LastResponceIndex=0;
-        IsAlive=[];
         
     end
     
     methods
         function [rt]=get.IsAlive(obj)
+            if(isempty(obj.NetO))
+                rt=false;
+                return;
+            end
             rt=obj.NetO.IsAlive;
         end
         
@@ -63,7 +68,10 @@ classdef CSCom < ExposeCOM
             obj.NetO.Stop();
         end
         
-        function [varargout]=Send(obj,toId,msg,data,requireResponse)
+        function [varargout]=Send(obj,toId,msg,mtype,data,requireResponse)
+            if(~exist('mtype','var') || isempty(mtype) || ~isa(mtype,'ExposeMessageType'))
+                mtype=ExposeMessageType.Warning;
+            end
             % making the message from the map.
             wasComMessage=true;
             if(~isa(msg,'CSComMessage'))
@@ -71,7 +79,7 @@ classdef CSCom < ExposeCOM
                 if(~exist('data','var'))
                     data=[];
                 end
-                msg=CSComMessage(msg,CSComMessageType.Data,data);
+                msg=CSComMessage(msg,mtype,data);
             end
             if(~exist('requireResponse','var'))
                 requireResponse=nargout>0;
@@ -103,7 +111,7 @@ classdef CSCom < ExposeCOM
                 msg=toID;
                 toID='';
             end
-            msg=CSComMessage(msg,CSComMessageType.Error);
+            msg=CSComMessage(msg,ExposeMessageType.Error);
             obj.Send(toID,msg);
         end
         
@@ -112,7 +120,7 @@ classdef CSCom < ExposeCOM
                 msg=toID;
                 toID='';
             end
-            msg=CSComMessage(msg,CSComMessageType.Warning);
+            msg=CSComMessage(msg,ExposeMessageType.Warning);
             obj.Send(toID,msg);
         end
     end
@@ -132,41 +140,55 @@ classdef CSCom < ExposeCOM
             end
             
             try
-                msg=CSComMessage.FromNetObject(e.Message);
-                
                 lastwarn(''); %reset the state of the last warning.
                 
+                id=CSCom.NetValueToRawData(e.WebsocketID);
+                msg=CSComMessage.FromNetObject(e.Message);
+                requireRsp=CSCom.NetValueToRawData(e.RequiresResponse);
+                
+                evargs=ExposeMessageEventStruct(id,msg,requireRsp);
+                
                 % call the event.
-                obj.notify('MessageRecived',ExposeMessageEventStruct(msg,...
-                    e.WebsocketID,e.RequiresResponse));
+                obj.notify('MessageRecived',evargs);
 
                 [emsg,wrnid]=lastwarn;
-                haserror=false;
+                haserror=~isempty(emsg);
                 haswarning=~isempty(wrnid);
-                if(haswarning)
-                    haserror=contains(wrnid,'error');
-                    haswarning=false;
+                if(haserror && haswarning)
+                    haserror=contains(lower(wrnid),'error');
+                    haswarning=~haserror;
                 end
                 if(e.RequiresResponse)
+                    
                     if(~haserror)
-                        obj.Send(e.WebsocketID,"response",e.Response);
+                        %obj.Send(id,"rsp",msg.MessageType,evargs.Response,false);
+                        % make the response message.
+                        if(isa(evargs.Response,'CSComMessage'))
+                            rmsg=evargs.Response;
+                        else
+                            rmsg=CSComMessage('rsp',msg.MessageType,evargs.Response);
+                        end
+                        e.Response=rmsg.ToNetObject();
                     else
-                        obj.NotifyError(e.WebsocketID,emsg);
+                        e.Response=[];
+                        obj.NotifyError(id,emsg);
                     end
                     
+                    e.ReleaseAsynchroniusEvent();
+                    
                     if(haswarning)
-                        obj.NotifyWarning(e.WebsocketID,emsg);
+                        obj.NotifyWarning(id,emsg);
                     end
                 else
                     if(haserror)
-                        obj.NotifyError(e.WebsocketID,emsg);
+                        obj.NotifyError(id,emsg);
                     elseif(haswarning)
-                        obj.NotifyWarning(e.WebsocketID,emsg);
+                        obj.NotifyWarning(id,emsg);
                     end
                 end
             catch err
                 % send the error back to the server.
-                obj.NotifyError(e.WebsocketID,err.message);
+                obj.NotifyError(id,err.message);
                 % warn about the error.
                 warning(err.message);
             end
@@ -175,8 +197,10 @@ classdef CSCom < ExposeCOM
     
     methods
         function delete(obj)
-            obj.NetO.Dispose();
-            obj.NetO=[];
+            if(~isempty(obj.NetO))
+                obj.NetO.Dispose();
+                obj.NetO=[];
+            end
         end
     end
 
@@ -211,6 +235,8 @@ classdef CSCom < ExposeCOM
                 val=char(nval);
             elseif(contains(vc,'.string')) % string will become char.
                 val=char(nval);
+            elseif(contains(vc,'logical'))
+                val=logical(nval);
             end
         end
     end

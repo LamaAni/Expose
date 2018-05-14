@@ -213,7 +213,7 @@ classdef ExposeMapper < handle
                         % back to labview.
                         namepart(~isstrprop(namepart,'alphanum'))='_';
                     end
-                    if(~isfield(o,namepart))
+                    if(~isfield(o,namepart) && ~isprop(o,namepart))
                         return;
                     end
                     [rt,hasval]=ExposeMapper.findValue(o.(namepart),nameparts,i+1);

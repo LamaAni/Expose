@@ -1,5 +1,7 @@
-﻿using System;
+﻿using CSCom;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,7 +12,7 @@ namespace Tester
     {
         static void Main(string[] args)
         {
-            bool doSelfServer = false;
+            bool doSelfServer = true;
             CSCom.CSCom server = null;
             if (doSelfServer)
             {
@@ -39,17 +41,17 @@ namespace Tester
                 valToSend[9999] = 23;
                 data.Value = valToSend;
                 data.Namepath = "lama";
-                clinet.Send(new CSCom.NPMessage(CSCom.NPMessageType.Warning, new CSCom.NPMessageNamepathData[] { data }, "test message"));
-                System.Threading.Thread.Sleep(100);
-
-                Console.WriteLine("Press <enter> to exit.");
-
-                if(doSelfServer)
-                    Console.ReadLine();
-
-                if (waitBeforeStopping)
+                Stopwatch watch = new Stopwatch();
+                watch.Start();
+                NPMessage rsp= clinet.Send(CSCom.NPMessageType.Warning, "lama", (CSCom.NPMessageNamepathData)null, true); ;
+                watch.Stop();
+                if (waitBeforeStopping || doSelfServer)
                 {
+                    Console.WriteLine("Waited for send[ms]: " + watch.Elapsed.TotalMilliseconds);
+                    if (rsp != null)
+                        Console.WriteLine("Recived response text: " + rsp.Text);
                     Console.WriteLine("Connected and waiting...");
+                    Console.WriteLine("Press <enter> to exit.");
                     Console.ReadLine();
                 }
 
@@ -88,6 +90,7 @@ namespace Tester
 
         private static void Server_MessageRecived1(object sender, WebsocketPipe.WebsocketPipe<CSCom.NPMessage>.MessageEventArgs e)
         {
+            e.Response = new NPMessage(NPMessageType.Warning, null, "kka");
             if(e.Message.MessageType== CSCom.NPMessageType.Error)
             {
                 Console.WriteLine("************************\nError recived from client:\n" + e.Message.Text);

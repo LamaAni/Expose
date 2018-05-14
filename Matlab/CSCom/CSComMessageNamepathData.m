@@ -3,8 +3,8 @@ classdef CSComMessageNamepathData < handle
     %   Detailed explanation goes here
     
     properties
-       Idxs=int32([]);
-       Size=int32([]);
+       %Idxs=int32([]);
+       %Size=int32([]);
        Value;
        Namepath;
     end
@@ -51,6 +51,16 @@ classdef CSComMessageNamepathData < handle
     end
     
     methods(Static)
+        function [map]=ToExposeMapperMap(vals)
+            if(isa(vals,containers.Map))
+                vals=vals.values;
+            end
+            map=containers.Map();
+            for i=1:length(vals)
+                map(vals{i}.Namepath)=vals{i};
+            end
+        end
+        
         function [map]=ToNamepathDataMap(map,compareTo)
             if(~isa(map,'containers.Map'))
                 map=ExposeMapper.mapToCollection(map);
@@ -99,29 +109,33 @@ classdef CSComMessageNamepathData < handle
                     return;
                 end
             end
-            npd=[];
-            idxs=[];
-            vsize=[];
-            ispartial=0;
-            if(exist('compareTo','var') &&...
-                    ismatrix(value) && ismatrix(compareTo)&&...
-                    all(size(value)==size(compareTo)) &&...
-                    isa(value,class(compareTo)))
-                % update only partial.
-                idxs=find(value(:)~=compareTo(:));
-                
-                % if all elements then not partial.
-                ispartial=length(idxs)==numel(value);
-            end
             
-            if(ismatrix(value))
-                vsize=size(value);
-            end
-            if(ispartial && isempty(idxs))
-                % nothing to update.
-                return;
-            end
-            npd=CSComMessageNamepathData(namepath,value,vsize,idxs);
+            npd=CSComMessageNamepathData(namepath,value);
+            
+            % removed since partial update is not supported yet.
+%             npd=[];
+%             idxs=[];
+%             vsize=[];
+%             ispartial=0;
+%             if(exist('compareTo','var') &&...
+%                     ismatrix(value) && ismatrix(compareTo)&&...
+%                     all(size(value)==size(compareTo)) &&...
+%                     isa(value,class(compareTo)))
+%                 % update only partial.
+%                 idxs=find(value(:)~=compareTo(:));
+%                 
+%                 % if all elements then not partial.
+%                 ispartial=length(idxs)==numel(value);
+%             end
+%             
+%             if(ismatrix(value))
+%                 vsize=size(value);
+%             end
+%             if(ispartial && isempty(idxs))
+%                 % nothing to update.
+%                 return;
+%             end
+%             npd=CSComMessageNamepathData(namepath,value,vsize,idxs);
         end
     end
 end
