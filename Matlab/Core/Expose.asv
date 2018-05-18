@@ -9,9 +9,11 @@ classdef Expose<handle
             if(~isa(com,'ExposeCOM'))
                 error('Exposition com must implement class ExposeCOM');
             end
-
+            
+            PendingUpdates=AutoRemoveMap(5*60);
             obj.Com=com;
             com.addlistener('MessageRecived',@obj.onMessage);
+            obj.addlistener('PropertyUpdated',@obj.onPropertyUpdated);
         end
     end
         
@@ -116,6 +118,44 @@ classdef Expose<handle
         end
     end
     
+    % properties and property events.
+    events
+        PropertyUpdated;
+    end
+    
+    properties (Access = protected)
+        PendingUpdates;
+        PendingUpdatesEventStruct=event.EventData;
+        IsCurrentlyUpdatingProperties=false;
+        LastTimePropertyUpdateWasCalled=-1;
+    end
+    
+    methods(Access = protected)
+        function onPropertyUpdated(exp,s,e)
+            if(exp.IsCurrentlyUpdatingProperties)
+                % can we have async?
+                return;
+            end
+            
+            exp.IsCurrentlyUpdatingProperties=true;
+            startts=exp.LastTimePropertyUpdateWasCalled;
+            
+            names=exp.PendingUpdates.keys();
+            toIds=exp.PendingUpdates.values();
+            exp.PendingUpdates.clear();
+            
+            % mapping objects.
+            sByIdToSend=containers.Map;
+            
+            for i=1:length(names)
+                ids=toIds{i}.keys;
+                for j=1:length(ids)
+                    
+                end
+            end
+        end
+    end
+    
     methods
         function [varargout]=Invoke(exp,toID,name,varargin)
             if(~exist('name','var') && exist('toID','var'))
@@ -147,7 +187,7 @@ classdef Expose<handle
         end
         
         % calls to update the specific parameter to the remote value.
-        function Update(exp,toID,name)
+        function Update(exp,toID,name,direct)
             if(~exist('name','var') && exist('toID','var'))
                 name=toID;
                 toID=[];
@@ -169,21 +209,42 @@ classdef Expose<handle
                 name={name};
             end
             hasValues=0;
-
-            data=struct();
-            for i=1:length(name)
-                pn=name{i};
-                if(~isprop(hndl,pn) && ~isfield(hndl,pn))
-                    continue;
+            if(direct)
+                data=struct();
+                for i=1:length(name)
+                    pn=name{i};
+                    if(~isprop(hndl,pn) && ~isfield(hndl,pn))
+                        continue;
+                    end
+                    hasValues=1;
+                    data.(pn)=hndl.(pn);
                 end
-                hasValues=1;
-                data.(pn)=hndl.(pn);
+                if(~hasValues)
+                    return;
+                end           
+                exp.Com.Send(toID,name,ExposeMessageType.Set,data);
+            else
+                % invoking the pending event.
+                for i=1:length(name)
+                    pn=name{i};
+                    if(~ischar(pn)||isempty(pn))
+                        continue;
+                    end
+                    if(~exp.PendingUpdates.contains(pn))
+                        toIDCol=containers.map;
+                    else
+                        toIDCol=exp.PendingUpdates(pn);
+                    end
+                    if(ischar(toID) && ~isempty(toID))
+                        toIDCol(toID)=true;
+                    end
+                    exp.PendingUpdates(pn)=toIDCol;
+                end
+                
+                % calling the event.
+                exp.LastTimePropertyUpdateWasCalled=now;
+                exp.notify('PropertyUpdated',exp.PendingUpdatesEventStruct);
             end
-            if(~hasValues)
-                return;
-            end           
-            exp.Com.Send(toID,name,ExposeMessageType.Set,data);
-
         end
     end
 end

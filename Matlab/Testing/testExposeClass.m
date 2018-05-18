@@ -18,6 +18,7 @@ classdef testExposeClass < Expose
         TestStruct=[];
         MatrixSize=1000;
         MatrixUpdateTime=100; % in ms.
+        TestGraph=[10,10;10,10];
     end
     
     methods
@@ -55,8 +56,9 @@ classdef testExposeClass < Expose
                 i=i+1;
                 img=eye(msize)*3;
                 img=img+rand(msize);
-                exp.TestVector=double(256*(img./max(img(:))));
-                exp.Update('TestVector');
+                img=img(100:end-100,:);
+                exp.TestGraph=double(256*(img./max(img(:))));
+                exp.Update('TestGraph');
                 pause(exp.MatrixUpdateTime/1000);
                 if(n>0 && i>=n)
                     break;
