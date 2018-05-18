@@ -13,10 +13,14 @@ namespace Tester
         static void Main(string[] args)
         {
             bool doSelfServer = true;
+            bool waitBeforeStopping = true;
+
             CSCom.CSCom server = null;
             if (doSelfServer)
             {
                 server = new CSCom.CSCom();
+                server.DoLogging = true;
+                server.DoWebsocketLogging = false;
                 server.Log+=(s,e)=>{
                     Console.WriteLine(e.Message);
                 };
@@ -24,41 +28,54 @@ namespace Tester
                 server.MessageRecived += Server_MessageRecived1; ;
             }
 
-
-            bool waitBeforeStopping = true;
-            CSCom.CSCom clinet = new CSCom.CSCom();
-            clinet.Log += (s, e) => {
+            CSCom.CSCom client = new CSCom.CSCom();
+            client.Log += (s, e) => {
                 Console.WriteLine(e.Message);
             };
-            clinet.Connect();
-            clinet.MessageRecived += Clinet_MessageRecived;
-            System.Threading.Thread.Sleep(100);
-            if(clinet.IsAlive)
+
+            client.DoLogging = true;
+            client.DoWebsocketLogging = false;
+            client.Connect(true);
+            client.MessageRecived += Clinet_MessageRecived;
+            //System.Threading.Thread.Sleep(300);
+            
+            if(client.IsAlive)
             {
                 Console.WriteLine("Connected to server.");
-                CSCom.NPMessageNamepathData data = new CSCom.NPMessageNamepathData();
-                float[] valToSend = new float[10000];
-                valToSend[9999] = 23;
-                data.Value = valToSend;
-                data.Namepath = "lama";
+                int imgsize = 3000;
+                var valToSend = new float[imgsize,imgsize];
+                Random r = new Random();
+                for (int i = 0; i < imgsize; i++)
+                {
+                    for (var j = 0; j < imgsize; j++)
+                        valToSend[i, j] = (float)r.NextDouble();
+                }
+
+                Console.WriteLine("Sending dummy message for first time serialization....");
+                Console.WriteLine();
+                NPMessage rsp = client.Send(NPMessage.FromValue(new double[10000], NPMessageType.Invoke, "dump"), true);
+                Console.WriteLine();
+
                 Stopwatch watch = new Stopwatch();
+                Console.WriteLine("Sending large message....");
+                Console.WriteLine();
                 watch.Start();
-                NPMessage rsp= clinet.Send(CSCom.NPMessageType.Warning, "lama", (CSCom.NPMessageNamepathData)null, true); ;
+                rsp = client.Send(NPMessage.FromValue(valToSend, NPMessageType.Invoke, "lama"), true);
                 watch.Stop();
+                Console.WriteLine();
                 if (waitBeforeStopping || doSelfServer)
                 {
                     Console.WriteLine("Waited for send[ms]: " + watch.Elapsed.TotalMilliseconds);
                     if (rsp != null)
                         Console.WriteLine("Recived response text: " + rsp.Text);
                     Console.WriteLine("Connected and waiting...");
-                    Console.WriteLine("Press <enter> to exit.");
-                    Console.ReadLine();
+                    Console.WriteLine(" *** Press <key> to exit.");
+                    Console.ReadKey();
                 }
 
-                clinet.Stop();
-                clinet.Dispose();
-                clinet = null;
-
+                client.Stop();
+                client.Dispose();
+                client = null;
 
                 Console.WriteLine("Stopped.");
             }
@@ -97,7 +114,7 @@ namespace Tester
                 return;
             }
             CSCom.CSCom server = (CSCom.CSCom)sender;
-            Console.WriteLine("Recived map with " + e.Message.Namepaths.Count + " name paths");
+            Console.WriteLine("Recived map with " + e.Message.NamepathsCount + " name paths");
         }
     }
 }

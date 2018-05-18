@@ -20,33 +20,33 @@ classdef CSComMessageNamepathData < handle
             end
             obj.Namepath=namepath;
             obj.Value=value;
-            if(exist('size','var'))
-                obj.Size=int32(vsize);
-            end
-            if(exist('idxs','var'))
-                obj.Size=int32(idxs);
-            end
+%             if(exist('size','var'))
+%                 obj.Size=int32(vsize);
+%             end
+%             if(exist('idxs','var'))
+%                 obj.Idxs=int32(idxs);
+%             end
         end
         
         function [val]=GetValue(obj,org)
             val=obj.Value;
             
             % nothing to do if not a value.
-            if(~ismatrix(val))
-                return;
-            end
+%             if(~ismatrix(val))
+%                 return;
+%             end
             
-            % found updating indexs.
-            if(~isempty(obj.Idxs) && ismatrix(org) && numel(org)==numel(val))
-                org=org(:);
-                org(obj.Idxs)=val;
-                val=org;
-            end
-            
-            % reshaping the new value.
-            if(~isempty(obj.Size))
-                val=reshape(val(:),obj.Sizes);
-            end
+%             % found updating indexs.
+%             if(~isempty(obj.Idxs) && ismatrix(org) && numel(org)==numel(val))
+%                 org=org(:);
+%                 org(obj.Idxs)=val;
+%                 val=org;
+%             end
+%             
+%             % reshaping the new value.
+%             if(~isempty(obj.Size))
+%                 val=reshape(val(:),obj.Sizes);
+%             end
         end
     end
     

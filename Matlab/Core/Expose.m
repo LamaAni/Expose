@@ -22,7 +22,6 @@ classdef Expose<handle
     properties
         % override this property to allow for specific handler
         % manipulations.
-        Handlers=[];
     end
     
     % general com methods
@@ -106,31 +105,80 @@ classdef Expose<handle
     % public handler methods
     methods(Access = protected)
         function [o]=GetHandler(obj,id,e)
-            if(isempty(obj.Handlers))
-                o=obj;
-                return;
-            end
-            
-            o=obj.Handlers.GetHandler(id,e);
+            o=obj;
         end
         
         function [o]=CreateHandler(obj,id,e)
-            if(isempty(obj.Handlers))
-                o=obj;
-                return;
-            end
-            
-            o=obj.Handlers.CreateHandler(id,e);
+            o=obj;
         end
         
         function DestroyHandler(obj,id,e)
-            if(isempty(obj.Handlers))
-                % stop the connection since this is the self.
-                obj.Com.Stop();
-                return;
+        end
+    end
+    
+    methods
+        function [varargout]=Invoke(exp,toID,name,varargin)
+            if(~exist('name','var') && exist('toID','var'))
+                name=toID;
+                toID=[];
+            end            
+            if(~exist('toID','var'))
+                toID=[];
+            end
+            hndl=exp.GetHandler(toID);
+            if(~exist('name','var') || isempty(name) || ~ischar(name))
+                error('Please provide a method name. (char array)');
             end
             
-            obj.Handlers.DestroyHandler(id,e);
+            args=varargin(:);
+            if(isempty(args))
+                args=[];
+            elseif(length(args)==1)
+                args=args{1};
+            end
+            
+            if(nargout>0)
+                varargout=cell(1,nargout);
+                varargout{:}=exp.Com.Send(toID,name,...
+                    ExposeMessageType.Invoke,args);
+            else
+                exp.Com.Send(toID,name,ExposeMessageType.Invoke,varargin(:),args);
+            end
+        end
+        
+        % calls to update the specific parameter to the remote value.
+        function Update(exp,toID,name)
+            if(~exist('name','var') && exist('toID','var'))
+                name=toID;
+                toID=[];
+            end            
+            if(~exist('toID','var'))
+                toID=[];
+            end
+            hndl=exp.GetHandler(toID);
+            if(~exist('name','var'))
+                name=fieldnames(hndl);
+            end
+            if(isempty(name))
+                return;
+            end
+            if(~iscell(name))
+                name={name};
+            end
+            hasValues=0;
+            data=struct();
+            for i=1:length(name)
+                pn=name{i};
+                if(~isprop(hndl,pn) && ~isfield(hndl,pn))
+                    continue;
+                end
+                hasValues=1;
+                data.(pn)=hndl.(pn);
+            end
+            if(~hasValues)
+                return;
+            end
+            exp.Com.Send(toID,name,ExposeMessageType.Set,data);
         end
     end
 end

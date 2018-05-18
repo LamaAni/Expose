@@ -13,12 +13,55 @@ classdef testExposeClass < Expose
     properties
         TestString='';
         TestMatrix=[1,2,3,4];
+        TestNumeric=0;
+        TestVector=[];
+        TestStruct=[];
+        MatrixSize=1000;
+        MatrixUpdateTime=100; % in ms.
     end
     
     methods
-        function [rslt]=someInvokeMethod(obj,o)
-            disp(o);
-            rslt=32;
+        function [rslt]=SomeMethod(exp)
+            rslt=exp.Invoke([],'lama','Test data');
+        end
+        
+        function [rslt]=GetSilentModeCount(exp)
+            rslt=exp.Invoke([],'GetSilentModeCount');
+        end
+        
+        function testing(exp)
+            tic;
+            n=201;
+            for i=1:n
+                exp.TestString=...
+                    ['This is some updated string, with random num,',num2str(rand())];                
+                exp.Update('TestString');
+            end
+            [cnt]=exp.GetSilentModeCount();
+            total=toc;
+            disp(['Updated ',num2str(n),' in ',num2str(total),' [ms]']);
+        end
+        
+        function testGraphUpdate(exp,n,msize)
+
+            if(~exist('n','var'))
+                n=-1;
+            end
+            if(~exist('msize','var'))
+                msize=exp.MatrixSize;
+            end
+            i=0;
+            while(true)
+                i=i+1;
+                img=eye(msize)*3;
+                img=img+rand(msize);
+                exp.TestVector=double(256*(img./max(img(:))));
+                exp.Update('TestVector');
+                pause(exp.MatrixUpdateTime/1000);
+                if(n>0 && i>=n)
+                    break;
+                end
+            end
         end
     end
     

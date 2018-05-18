@@ -84,10 +84,16 @@ classdef CSCom < ExposeCOM
             if(~exist('requireResponse','var'))
                 requireResponse=nargout>0;
             end
-            rsp=obj.NetO.Send(msg.ToNetObject(),requireResponse,toId);
+            
+            if(isempty(toId))
+                toId='';
+            end
+            msg=msg.ToNetObject();
+            rsp=obj.NetO.Send(msg,requireResponse,toId);
             if(~requireResponse)
                 return;
             end
+            
             % moving to matlab.
             rsp=CSComMessage.FromNetObject(rsp);
             if(wasComMessage)
@@ -96,14 +102,17 @@ classdef CSCom < ExposeCOM
             end
             
             % converting back to object.
-            ro=rsp.UpdateObject();
-            
-            % checking the number of argumetns.
-            if(nargout>1 && iscell(ro))
-                varargout(:)=ro;
+            % null is not acceptable here.
+            if(isempty(rsp))
+                ro=cell(1,nargout);
             else
-                varargout(1)=ro;
+                ro=rsp.SetTo();
+                if(~iscell(ro))
+                    ro={ro};
+                end
             end
+            
+            varargout(:)=ro;
         end
         
         function NotifyError(obj,toID,msg)
@@ -206,7 +215,7 @@ classdef CSCom < ExposeCOM
 
     methods(Static)
         function [val]=NetValueToRawData(nval)
-            val=[];
+            val=nval;
             vc=class(nval);
             vc=lower(vc);
             if(contains(vc,'.boolean'))

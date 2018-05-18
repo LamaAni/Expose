@@ -53,7 +53,7 @@ classdef CSComMessage < ExposeMessage
             end
             
             if(hasSource)
-                map=ObjectMap.mapToCollection(o);
+                map=ExposeMapper.mapToCollection(o);
             end
             
             vals=obj.Namepaths.values;
@@ -103,8 +103,8 @@ classdef CSComMessage < ExposeMessage
                     csnpd=CSCom.NPMessageNamepathData();
                     csnpd.Value=npd.Value;
                     csnpd.Namepath=npd.Namepath;
-                    csnpd.Idxs=npd.Idxs;
-                    csnpd.Size=npd.Size;
+%                     csnpd.Idxs=npd.Idxs;
+%                     csnpd.Size=npd.Size;
                     data(i)=csnpd;
                 end
             else
@@ -124,15 +124,20 @@ classdef CSComMessage < ExposeMessage
         function [o]=FromNetObject(nobj)
             % need to convert message to message map.
             % then send message.
+            if(isempty(nobj))
+                o=[];
+                return;
+            end
+            
             infos=nobj.NamePaths;
             map=containers.Map();
             for i=1:infos.Length
                 info=infos(i);
                 npd=CSComMessageNamepathData(...
                     CSCom.NetValueToRawData(info.Namepath),...
-                    CSCom.NetValueToRawData(info.Value),...
-                    CSCom.NetValueToRawData(info.Size),...
-                    CSCom.NetValueToRawData(info.Idxs));
+                    CSCom.NetValueToRawData(info.Value));
+%                     CSCom.NetValueToRawData(info.Size),...
+%                     CSCom.NetValueToRawData(info.Idxs));
                 map(npd.Namepath)=npd;
             end
             

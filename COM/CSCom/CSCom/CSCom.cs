@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using WebsocketPipe;
 
@@ -20,10 +21,9 @@ namespace CSCom
         {
             Pipe = new WebsocketPipe<NPMessage>(new Uri(comServiceAddress));
 
-            Pipe.LogMethod = (d, s) =>
+            Pipe.LogMethod = (s) =>
             {
-                if (DoLogging && Log != null)
-                    Log(this, new LogEventArgs(d.ToString()));
+                CallLogEvent(s);
             };
 
             Pipe.MessageRecived += (s, e) =>
@@ -39,17 +39,14 @@ namespace CSCom
 
             Pipe.Close += (s, e) =>
             {
-                if (this.MessageRecived == null)
-                    return;
-
-                NPMessage closeMsg = new NPMessage(NPMessageType.Destroy, null, e.WebsocketID);
-
-                // replace me message object and send on.
-                e.Message = closeMsg;
-
-                // Call the close message.
-                this.MessageRecived(this, e);
+                SendCloseMessage(e.WebsocketID);
             };
+        }
+
+        private void CallLogEvent(string s)
+        {
+            if (DoLogging && Log != null)
+                Log(this, new LogEventArgs(s));
         }
 
         ~CSCom()
@@ -57,10 +54,23 @@ namespace CSCom
             try
             {
                 Pipe.Stop();
+                SendCloseMessage();
             }
-            catch
-            {
-            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Sends a close message to the handler.
+        /// </summary>
+        /// <param name="hndlId">If empty close all handlers</param>
+        private void SendCloseMessage(string hndlId = "")
+        {
+            if (this.MessageRecived == null)
+                return;
+
+            // Call the close message.
+            this.MessageRecived(this, new WebsocketPipe<NPMessage>.MessageEventArgs(new NPMessage(NPMessageType.Destroy, null, null)
+                , false, hndlId));
         }
 
         #region Properties
@@ -76,24 +86,39 @@ namespace CSCom
         public bool DoLogging { get; set; } = false;
 
         /// <summary>
+        /// If true then logs websocket messages.
+        /// </summary>
+        public bool DoWebsocketLogging
+        {
+            get
+            {
+                return Pipe.LogWebsocketMessages;
+            }
+            set
+            {
+                Pipe.LogWebsocketMessages = value;
+            }
+        }
+
+        /// <summary>
         /// If true then connected or listening.
         /// </summary>
-        public bool IsAlive { get { return Pipe != null && (IsConnected || IsListening); } }
+        public bool IsAlive { get { return (IsConnected || IsListening); } }
 
         /// <summary>
         /// True of the current is a server and is listening.
         /// </summary>
-        public bool IsListening { get { return Pipe != null && IsServer && Pipe.WSServer.IsListening; } }
+        public bool IsListening { get { return Pipe != null && Pipe.IsListening; } }
 
         /// <summary>
         /// True of a client and is connected.
         /// </summary>
-        public bool IsConnected { get { return Pipe != null && IsClient && Pipe.WS.ReadyState == WebSocketSharp.WebSocketState.Open; } }
+        public bool IsConnected { get { return Pipe != null && Pipe.IsConnected; } }
 
         /// <summary>
         /// True if a client
         /// </summary>
-        public bool IsClient { get { return Pipe != null && Pipe.WS != null; } }
+        public bool IsClient { get { return Pipe != null && Pipe.IsListening; } }
 
         /// <summary>
         /// True if a server
@@ -110,6 +135,17 @@ namespace CSCom
         /// The timeout to wait when doing async event execution.
         /// </summary>
         public int ASynchroniusEventExecutionTimeout { get; set; } = 10000;
+
+        /// <summary>
+        /// The id of the pipe.
+        /// </summary>
+        public string ID
+        {
+            get
+            {
+                return Pipe.PipeID;
+            }
+        }
 
         #endregion
 
@@ -145,17 +181,62 @@ namespace CSCom
         /// <summary>
         /// Connect as a client.
         /// </summary>
-        public void Connect()
+        public void Connect(bool inANewThread = false)
         {
-            Pipe.Connect();
+            if (IsAlive)
+            {
+                if (!IsConnected)
+                    Stop();
+                else return;
+            }
+            if (inANewThread)
+            {
+                new Task((cscom) =>
+                {
+                    Pipe.Connect();
+                    while (!IsConnected)
+                        System.Threading.Thread.Sleep(10);
+                    do
+                    {
+                        System.Threading.Thread.Sleep(10);
+                    }
+                    while (IsConnected);
+                }, this).Start();
+                while (!IsConnected)
+                    System.Threading.Thread.Sleep(10);
+            }
+            else Pipe.Connect();
         }
 
         /// <summary>
         /// Listen as a server.
         /// </summary>
-        public void Listen()
+        public void Listen(bool inANewThread = false)
         {
-            Pipe.Listen();
+            if (IsAlive)
+            {
+                if (!IsListening)
+                    Stop();
+                else return;
+            }
+
+            if (inANewThread)
+            {
+                new Task((cscom) =>
+                {
+                    Pipe.Listen();
+                    while (!IsListening)
+                        System.Threading.Thread.Sleep(10);
+                    do
+                    {
+                        System.Threading.Thread.Sleep(10);
+                    }
+                    while (IsListening);
+                }, this).Start();
+                while (!IsListening)
+                    System.Threading.Thread.Sleep(10);
+            }
+            else Pipe.Listen();
         }
 
         /// <summary>
@@ -215,6 +296,12 @@ namespace CSCom
         /// <returns>The response if required, otherwise null.</returns>
         public NPMessage Send(NPMessageType type, string msg, NPMessageNamepathData[] data, bool requireResponse = false, string toWebsocket = null)
         {
+            if(toWebsocket!=null)
+            {
+                toWebsocket = toWebsocket.Trim();
+                toWebsocket = toWebsocket.Length == 0 ? null : toWebsocket;
+            }
+
             return Send(new NPMessage(type, data, msg), requireResponse, toWebsocket);
         }
 
@@ -240,6 +327,27 @@ namespace CSCom
             else Pipe.Send(msg, toWebsocket);
 
             return response;
+        }
+
+        #endregion
+
+
+        #region Static Methods
+
+        /// <summary>
+        /// Collect all garbage helper.
+        /// </summary>
+        public static void CollectGarbage()
+        {
+            GC.Collect(0);
+        }
+
+        public void LogNetInfo()
+        {
+            StringBuilder str = new StringBuilder();
+            str.AppendLine("Net version: " + Environment.Version.ToString());
+            str.AppendLine("Thread priority: " + System.Threading.Thread.CurrentThread.Priority);
+            CallLogEvent(str.ToString());
         }
 
         #endregion

@@ -8,6 +8,7 @@ classdef ExposeMessageType<int32
         Invoke(16)
         Get(32)
         Set(64)
+        Response(128)
     end
 end
 
