@@ -8,6 +8,8 @@ classdef ExposeCOM<handle
     
     properties(Abstract, SetAccess = protected)
         IsAlive;
+        IsListening;
+        IsConnected;
     end
     
     methods (Abstract)

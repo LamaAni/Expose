@@ -5,7 +5,7 @@ classdef ExposeMessage<handle
     
     properties
         % default message type is a warning.
-        MessageType=ExposeMessageType.Warning;
+        MessageType=Expose.Core.ExposeMessageType.Warning;
         % Some text that accompanies the message, usefule for simple
         % messaging structures.
         Text=[];

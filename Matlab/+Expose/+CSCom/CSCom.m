@@ -1,7 +1,8 @@
-classdef CSCom < ExposeCOM
+classdef CSCom < Expose.Core.ExposeCOM
     %CSCOM Implements the websocket connection module to be used
     methods
         function obj = CSCom(assemblyLoc)
+            import Expose.CSCom.*;
             if(isempty(which('CSCom.CSCom')))
                 if(~exist('assemblyLoc','var'))
                     assemblyLoc=CSCom.GetAssemblyLocationFromCurrentFileLocation();
@@ -10,18 +11,21 @@ classdef CSCom < ExposeCOM
             end
         end
     end
-
     
     % abstract class implementations
     properties(SetAccess = protected)
         Url=[];
         IsAlive=[];
+        IsListening=[];
+        IsConnected=[];
     end
     
     methods
         function Init(obj,url)
+            %import Expose.Core.*;
+            
             if(~exist('url','var'))
-                url=CSCom.DefaultURL;
+                url=obj.DefaultURL;
             end
             
             obj.Url=url;
@@ -64,11 +68,29 @@ classdef CSCom < ExposeCOM
             rt=obj.NetO.IsAlive;
         end
         
+        function [rt]=get.IsListening(obj)
+            if(isempty(obj.NetO))
+                rt=false;
+                return;
+            end
+            rt=obj.NetO.IsListening;
+        end
+        
+        function [rt]=get.IsConnected(obj)
+            if(isempty(obj.NetO))
+                rt=false;
+                return;
+            end
+            rt=obj.NetO.IsConnected;
+        end
+        
         function Stop(obj)
             obj.NetO.Stop();
         end
         
         function [varargout]=Send(obj,toId,msg,mtype,data,requireResponse)
+            import Expose.Core.*;
+            import Expose.CSCom.*;
             if(~exist('mtype','var') || isempty(mtype) || ~isa(mtype,'ExposeMessageType'))
                 mtype=ExposeMessageType.Warning;
             end
@@ -120,7 +142,7 @@ classdef CSCom < ExposeCOM
                 msg=toID;
                 toID='';
             end
-            msg=CSComMessage(msg,ExposeMessageType.Error);
+            msg=Expose.CSCom.CSComMessage(msg,Expose.Core.ExposeMessageType.Error);
             obj.Send(toID,msg);
         end
         
@@ -136,18 +158,22 @@ classdef CSCom < ExposeCOM
     
     methods(Access = protected)
         function onLog(obj,s,e)
-            msg=e.Message;
-            obj.notify('Log',ExposeLogEventStruct(msg));
+            import Expose.Core.*;
+            msg=Expose.CSCom.CSCom.NetValueToRawData(e.Message);
+            callerID=Expose.CSCom.CSCom.NetValueToRawData(e.WebsocketID);
+            obj.notify('Log',Expose.Core.ExposeLogEventStruct(callerID,msg));
             if(obj.TraceLogs)
                 disp(msg);
             end
         end
         
         function onMessage(obj,s,e)
+            import Expose.CSCom.*;
+            import Expose.Core.*;
             if(~event.hasListener(obj,'MessageRecived'))
                 return;
             end
-            
+            id=[];
             try
                 lastwarn(''); %reset the state of the last warning.
                 
@@ -155,7 +181,7 @@ classdef CSCom < ExposeCOM
                 msg=CSComMessage.FromNetObject(e.Message);
                 requireRsp=CSCom.NetValueToRawData(e.RequiresResponse);
                 
-                evargs=ExposeMessageEventStruct(id,msg,requireRsp);
+                evargs=Expose.Core.ExposeMessageEventStruct(id,msg,requireRsp);
                 
                 % call the event.
                 obj.notify('MessageRecived',evargs);
@@ -163,6 +189,9 @@ classdef CSCom < ExposeCOM
                 [emsg,wrnid]=lastwarn;
                 haserror=~isempty(emsg);
                 haswarning=~isempty(wrnid);
+                if(haserror || haswarning)
+                    emsg=regexprep(emsg, '<.*?>','');
+                end
                 if(haserror && haswarning)
                     haserror=contains(lower(wrnid),'error');
                     haswarning=~haserror;
@@ -253,7 +282,7 @@ classdef CSCom < ExposeCOM
     methods(Static)
         function [apath]=GetAssemblyLocationFromCurrentFileLocation()
             fn=mfilename('fullpath');
-            apath=fileparts(fileparts(fileparts(fn)));
+            apath=fileparts(fileparts(fileparts(fileparts(fn))));
             apath=[apath,'\COM\CSCom\CSCom\bin\Release\CSCom.dll'];
             %disp(apath);
         end

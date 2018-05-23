@@ -1,9 +1,13 @@
-classdef CSComMessage < ExposeMessage
+classdef CSComMessage < Expose.Core.ExposeMessage
     %CSCOMMESSAGE Summary of this class goes here
     %   Detailed explanation goes here
 
     methods
         function obj = CSComMessage(txt,type,map,compareTo)
+            import Expose.Core.*;
+            import Expose.Map.*;
+            import Expose.CSCom.*;
+            
             if(exist('txt','var'))
                 if(isa(txt,'string'))
                    txt=char(txt); 
@@ -18,7 +22,7 @@ classdef CSComMessage < ExposeMessage
                 obj.Text=[];
             end
             
-            if(exist('type','var') && isa(type,'ExposeMessageType'))
+            if(exist('type','var') && isa(type,'Expose.Core.ExposeMessageType'))
                 obj.MessageType=type;
             else
                 obj.MessageType=ExposeMessageType.Warning;
@@ -45,6 +49,10 @@ classdef CSComMessage < ExposeMessage
         
         % sets the value of the current message to a specific object.
         function [o]=SetTo(obj,o)
+            import Expose.Core.*;
+            import Expose.Map.*;
+            import Expose.CSCom.*;
+            
             % update or make the object from the namepath.
             hasSource=true;
             if(~exist('o','var'))
@@ -72,6 +80,10 @@ classdef CSComMessage < ExposeMessage
         % get the value of properties, in the form of an object from the
         % message namepath values.
         function [o]=GetFrom(obj,from)
+            import Expose.Core.*;
+            import Expose.Map.*;
+            import Expose.CSCom.*;
+            
             % creating the new map.
             if(isempty(obj.Namepaths))
                 o=[];
@@ -94,6 +106,10 @@ classdef CSComMessage < ExposeMessage
     methods
         % convert the current to a .net object, so it can be sent.
         function msg=ToNetObject(obj)
+            import Expose.Core.*;
+            import Expose.Map.*;
+            import Expose.CSCom.*;
+            
             % collecting data.
             if(~isempty(obj.Namepaths))
                 vals=obj.Namepaths.values;
@@ -122,6 +138,10 @@ classdef CSComMessage < ExposeMessage
     methods(Static)
         % convert a .net object to a matlab object so it can be handled.
         function [o]=FromNetObject(nobj)
+            import Expose.Core.*;
+            import Expose.Map.*;
+            import Expose.CSCom.*;
+            
             % need to convert message to message map.
             % then send message.
             if(isempty(nobj))

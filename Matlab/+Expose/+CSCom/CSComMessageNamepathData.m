@@ -20,12 +20,6 @@ classdef CSComMessageNamepathData < handle
             end
             obj.Namepath=namepath;
             obj.Value=value;
-%             if(exist('size','var'))
-%                 obj.Size=int32(vsize);
-%             end
-%             if(exist('idxs','var'))
-%                 obj.Idxs=int32(idxs);
-%             end
         end
         
         function [val]=GetValue(obj,org)
@@ -62,6 +56,10 @@ classdef CSComMessageNamepathData < handle
         end
         
         function [map]=ToNamepathDataMap(map,compareTo)
+            import Expose.Core.*;
+            import Expose.Map.*;
+            import Expose.CSCom.*;
+            
             if(~isa(map,'containers.Map'))
                 map=ExposeMapper.mapToCollection(map);
             end
@@ -98,6 +96,10 @@ classdef CSComMessageNamepathData < handle
         end
         
         function [npd]=FromValue(namepath,value,compareTo)
+            import Expose.Core.*;
+            import Expose.Map.*;
+            import Expose.CSCom.*;
+            
             if(isa(value,'CSComMessageNamepathData'))
                 % in the case we already have a namepath data.
                 if(~exist('compareTo','var'))

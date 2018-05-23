@@ -1,4 +1,4 @@
-classdef AutoRemoveMapRemoveEvent<EventStruct
+classdef AutoRemoveMapRemoveEvent < event.EventData & handle
     %AUTOREMOVEMAPREMOVEEVENT Summary of this class goes here
     %   Detailed explanation goes here
     

@@ -73,6 +73,7 @@ classdef ExposeMapper < handle
         end
         
         function [col]=mapToCollection(o,basename,allowhandles)
+            import Expose.Map.*;
             col=containers.Map;
             if(~exist('allowhandles','var'))allowhandles=false;end
             if(~exist('basename','var'))basename='';end
@@ -121,8 +122,8 @@ classdef ExposeMapper < handle
         % update a sepcific value of an object given a namepath
         % and a value.
         function [o,wasUpdated]=update(o,namepath,val)
-            nameparts=ExposeMapper.fastSplitPathSeperator(namepath);
-            [o,wasUpdated]=ExposeMapper.updateByPath(o,nameparts,val,1);
+            nameparts=Expose.Map.ExposeMapper.fastSplitPathSeperator(namepath);
+            [o,wasUpdated]=Expose.Map.ExposeMapper.updateByPath(o,nameparts,val,1);
         end
         
         
@@ -152,6 +153,7 @@ classdef ExposeMapper < handle
     methods(Static, Access = protected)
 
         function [nameparts]=fastSplitPathSeperator(namepath)
+            import Expose.Map.*;
             idxs=find(namepath==ExposeMapper.PathSeperator)-1;
             if(isempty(idxs))
                 nameparts=cell(1,1);
@@ -174,6 +176,7 @@ classdef ExposeMapper < handle
         end
         
         function [rt,hasval]=findValue(o,nameparts,i)
+            import Expose.Map.*;
             hasval=0;
             rt=[];   
             
@@ -239,6 +242,7 @@ classdef ExposeMapper < handle
         end
         
         function [o,wasUpdated]=updateByPath(o,nameparts,val,i)
+            import Expose.Map.*;
             wasUpdated=0; 
             
             if(i>length(nameparts))
@@ -334,11 +338,13 @@ classdef ExposeMapper < handle
                 else
                     [o.(namepart),wasUpdated]=ExposeMapper.updateByPath(ival,nameparts,val,i+1); 
                 end
-            end  
+            end
         end
         
         % recursive call to update an object.
         function parseObject(col,o,basename,allowhandles)
+            import Expose.Map.*;
+            
             t=ExposeMapper.getType(o);
             
             switch(t)
@@ -400,6 +406,7 @@ classdef ExposeMapper < handle
     methods (Static)
         
         function [o]=testUpdate(o,namepath,val,n)
+            import Expose.Map.*;
             if(~exist('n','var'))n=1000;end;
             if(~exist('namepath','var'))namepath='a@b@c@d';end
             if(~exist('val','var'))val=eye(1000);end

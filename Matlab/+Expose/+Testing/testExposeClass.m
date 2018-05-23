@@ -1,12 +1,13 @@
-classdef testExposeClass < Expose
+classdef testExposeClass < Expose.Expose
     %TESTEXPOSECLASS Summary of this class goes here
     %   Detailed explanation goes here
     methods
         function obj = testExposeClass(com)
+            import Expose.CSCom.*;
             if(~exist('com','var'))
                 com=CSCom();
             end
-            obj@Expose(com);
+            obj@Expose.Expose(com);
         end
     end
     
@@ -56,7 +57,7 @@ classdef testExposeClass < Expose
                 i=i+1;
                 img=eye(msize)*3;
                 img=img+rand(msize);
-                img=img(100:end-100,:);
+                img=img(10:end-10,:);
                 exp.TestGraph=double(256*(img./max(img(:))));
                 exp.Update('TestGraph');
                 pause(exp.MatrixUpdateTime/1000);
@@ -69,7 +70,7 @@ classdef testExposeClass < Expose
     
     methods(Static)
         function [exp]=doServerTest()
-            exp=testExposeClass();
+            exp=Expose.Testing.testExposeClass();
             exp.Com.TraceLogs=true;
             exp.Listen();
         end

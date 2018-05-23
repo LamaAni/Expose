@@ -5,15 +5,16 @@ function IncludeLib(fpath)
         fpath=mfilename('fullpath');
         fpath=fileparts(fpath);
     end
-    dirlist=getAllDirectories(fpath);
-    dirlist(end+1)={fpath};
-    for i=1:length(dirlist)
-        if(pathHasBeenAdded(dirlist{i}))
-            continue;
-        end
-        addpath(dirlist{i});
-        disp(['Path added: ',dirlist{i}]);
-    end
+    addpath(genpath(fpath));
+%     dirlist=getAllDirectories(fpath);
+%     dirlist(end+1)={fpath};
+%     for i=1:length(dirlist)
+%         if(pathHasBeenAdded(dirlist{i}))
+%             continue;
+%         end
+%         addpath(dirlist{i});
+%         disp(['Path added: ',dirlist{i}]);
+%     end
 end
 
 function dirList = getAllDirectories(dirName)

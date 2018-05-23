@@ -21,9 +21,9 @@ namespace CSCom
         {
             Pipe = new WebsocketPipe<NPMessage>(new Uri(comServiceAddress));
 
-            Pipe.LogMethod = (s) =>
+            Pipe.LogMethod = (id,s) =>
             {
-                CallLogEvent(s);
+                CallLogEvent(id,s);
             };
 
             Pipe.MessageRecived += (s, e) =>
@@ -43,10 +43,10 @@ namespace CSCom
             };
         }
 
-        private void CallLogEvent(string s)
+        private void CallLogEvent(string websocketID, string s)
         {
             if (DoLogging && Log != null)
-                Log(this, new LogEventArgs(s));
+                Log(this, new LogEventArgs(websocketID, s));
         }
 
         ~CSCom()
@@ -156,12 +156,14 @@ namespace CSCom
         /// </summary>
         public class LogEventArgs : EventArgs
         {
-            public LogEventArgs(string msg="")
+            public LogEventArgs(string websocketID, string msg="")
             {
                 Message = msg;
+                WebsocketID = websocketID;
             }
 
             public string Message { get; private set; } = "";
+            public string WebsocketID { get; private set; }
         }
 
         /// <summary>
@@ -347,7 +349,7 @@ namespace CSCom
             StringBuilder str = new StringBuilder();
             str.AppendLine("Net version: " + Environment.Version.ToString());
             str.AppendLine("Thread priority: " + System.Threading.Thread.CurrentThread.Priority);
-            CallLogEvent(str.ToString());
+            CallLogEvent(null, str.ToString());
         }
 
         #endregion

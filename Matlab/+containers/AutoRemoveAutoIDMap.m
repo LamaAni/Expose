@@ -1,4 +1,4 @@
-classdef AutoRemoveAutoIDMap < AutoRemoveMap
+classdef AutoRemoveAutoIDMap < containers.AutoRemoveMap
     %AUTOREMOVETEMPOBJECTCOLLECTION Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -12,7 +12,7 @@ classdef AutoRemoveAutoIDMap < AutoRemoveMap
                 autoRemoveTimeout=60;
             end
             
-            col@AutoRemoveMap(autoRemoveTimeout);
+            col@containers.AutoRemoveMap(autoRemoveTimeout);
         end
         
         function [id]=NextTempID(obj)
@@ -26,7 +26,7 @@ classdef AutoRemoveAutoIDMap < AutoRemoveMap
                 id=col.NextTempID();
             end
             % call base.
-            setById@AutoRemoveMap(col,id,o);
+            setById@containers.AutoRemoveMap(col,id,o);
         end
     end
 end

@@ -12,7 +12,7 @@ classdef (ConstructOnLoad) ExposeMessageEventStruct < event.EventData & handle
                 error('You must provide a string based caller id.');
             end
             
-            if(~isa(msg,'ExposeMessage'))
+            if(~isa(msg,'Expose.Core.ExposeMessage'))
                 error('Exposure messages must implement ExposeMessage');
             end
             

@@ -242,56 +242,39 @@ namespace CSCom
 
         #region Binary arrays
 
-        //private static void FastCopyArrayByMarshal(Array source, Array dest, Type eltype)
+        //private static byte[] ToByteArray(Array source, Type elType)
         //{
-        //    GCHandle hsource = GCHandle.Alloc(source, GCHandleType.Pinned);
-        //    GCHandle hdest = GCHandle.Alloc(source, GCHandleType.Pinned);
+        //    GCHandle handle = GCHandle.Alloc(source, GCHandleType.Pinned);
         //    try
         //    {
-        //        IntPtr spointer = hsource.AddrOfPinnedObject();
-        //        IntPtr dpointer = hdest.AddrOfPinnedObject();
-        //        Marshal.Copy(source,)
+        //        IntPtr pointer = handle.AddrOfPinnedObject();
+        //        byte[] destination = new byte[source.Length * Marshal.SizeOf(elType)];
+        //        Marshal.Copy(pointer, destination, 0, destination.Length);
+        //        return destination;
         //    }
         //    finally
         //    {
-        //        if (hsource.IsAllocated) hsource.Free();
-        //        if (hdest.IsAllocated) hdest.Free();
+        //        if (handle.IsAllocated)
+        //            handle.Free();
         //    }
         //}
 
-        private static byte[] ToByteArray(Array source, Type elType)
-        {
-            GCHandle handle = GCHandle.Alloc(source, GCHandleType.Pinned);
-            try
-            {
-                IntPtr pointer = handle.AddrOfPinnedObject();
-                byte[] destination = new byte[source.Length * Marshal.SizeOf(elType)];
-                Marshal.Copy(pointer, destination, 0, destination.Length);
-                return destination;
-            }
-            finally
-            {
-                if (handle.IsAllocated)
-                    handle.Free();
-            }
-        }
-
-        private static Array FromByteArray(byte[] source, Type elType, int[] dims)
-        {
-            Array destination = Array.CreateInstance(elType, dims);
-            GCHandle handle = GCHandle.Alloc(destination, GCHandleType.Pinned);
-            try
-            {
-                IntPtr pointer = handle.AddrOfPinnedObject();
-                Marshal.Copy(source, 0, pointer, source.Length);
-                return destination;
-            }
-            finally
-            {
-                if (handle.IsAllocated)
-                    handle.Free();
-            }
-        }
+        //private static Array FromByteArray(byte[] source, Type elType, int[] dims)
+        //{
+        //    Array destination = Array.CreateInstance(elType, dims);
+        //    GCHandle handle = GCHandle.Alloc(destination, GCHandleType.Pinned);
+        //    try
+        //    {
+        //        IntPtr pointer = handle.AddrOfPinnedObject();
+        //        Marshal.Copy(source, 0, pointer, source.Length);
+        //        return destination;
+        //    }
+        //    finally
+        //    {
+        //        if (handle.IsAllocated)
+        //            handle.Free();
+        //    }
+        //}
 
         #endregion
 
