@@ -43,6 +43,8 @@ namespace CSCom
 
         public static int GetArrayConvertType(object o)
         {
+            if (o == null)
+                return (int)DataTypes.Other;
             Type t = o.GetType();
             if (!t.IsArray)
                 return (int)DataTypes.Other;

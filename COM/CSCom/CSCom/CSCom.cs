@@ -131,10 +131,36 @@ namespace CSCom
         /// </summary>
         public bool ASynchroniusEventExecution { get; set; } = false;
 
+
+        int? m_ASynchroniusEventExecutionTimeout = null;
         /// <summary>
         /// The timeout to wait when doing async event execution.
         /// </summary>
-        public int ASynchroniusEventExecutionTimeout { get; set; } = 10000;
+        public int ASynchroniusEventExecutionTimeout
+        {
+            get
+            {
+                if (m_ASynchroniusEventExecutionTimeout == null)
+                    return Pipe.Timeout;
+                return m_ASynchroniusEventExecutionTimeout.Value;
+            }
+            set { m_ASynchroniusEventExecutionTimeout = value; }
+        }
+
+        /// <summary>
+        /// The time to wait before timeout, in ms.
+        /// </summary>
+        public int Timeout
+        {
+            get
+            {
+                return Pipe.Timeout;
+            }
+            set
+            {
+                Pipe.Timeout = value;
+            }
+        }
 
         /// <summary>
         /// The id of the pipe.
@@ -352,6 +378,10 @@ namespace CSCom
             CallLogEvent(null, str.ToString());
         }
 
+        public static string PrintValueType(object o)
+        {
+            return o.GetType().ToString();
+        }
         #endregion
     }
 }

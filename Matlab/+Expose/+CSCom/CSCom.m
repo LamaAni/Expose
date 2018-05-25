@@ -32,6 +32,7 @@ classdef CSCom < Expose.Core.ExposeCOM
             obj.NetO=CSCom.CSCom(url);
             obj.NetO.DoLogging=true;
             obj.NetO.ASynchroniusEventExecution=true;
+            obj.NetO.ASynchroniusEventExecutionTimeout=obj.ComEventTimeout;
             obj.NetO.addlistener('Log',@obj.onLog);
             obj.NetO.addlistener('MessageRecived',@obj.onMessage);            
         end
@@ -51,6 +52,7 @@ classdef CSCom < Expose.Core.ExposeCOM
     
     properties
         TraceLogs=false;
+        ComEventTimeout=10000; %ms
     end
     
     properties (SetAccess = private)
@@ -142,6 +144,8 @@ classdef CSCom < Expose.Core.ExposeCOM
                 msg=toID;
                 toID='';
             end
+            
+            msg=Expose.CSCom.removeHtmlTags(msg);
             msg=Expose.CSCom.CSComMessage(msg,Expose.Core.ExposeMessageType.Error);
             obj.Send(toID,msg);
         end
@@ -151,6 +155,7 @@ classdef CSCom < Expose.Core.ExposeCOM
                 msg=toID;
                 toID='';
             end
+            msg=Expose.CSCom.removeHtmlTags(msg);
             msg=CSComMessage(msg,ExposeMessageType.Warning);
             obj.Send(toID,msg);
         end
@@ -189,9 +194,6 @@ classdef CSCom < Expose.Core.ExposeCOM
                 [emsg,wrnid]=lastwarn;
                 haserror=~isempty(emsg);
                 haswarning=~isempty(wrnid);
-                if(haserror || haswarning)
-                    emsg=regexprep(emsg, '<.*?>','');
-                end
                 if(haserror && haswarning)
                     haserror=contains(lower(wrnid),'error');
                     haswarning=~haserror;
@@ -208,13 +210,16 @@ classdef CSCom < Expose.Core.ExposeCOM
                         end
                         e.Response=rmsg.ToNetObject();
                     else
-                        e.Response=[];
                         obj.NotifyError(id,emsg);
+                        e.ReleaseAsynchroniusEvent();
+                        %obj.NotifyError(id,emsg);
+                        return;
                     end
                     
                     e.ReleaseAsynchroniusEvent();
                     
                     if(haswarning)
+                        pause(0.1);
                         obj.NotifyWarning(id,emsg);
                     end
                 else
@@ -277,7 +282,43 @@ classdef CSCom < Expose.Core.ExposeCOM
                 val=logical(nval);
             end
         end
+        
+        function [nval]=ValueToNet(val)
+            nval=val;
+            vc=class(val);
+            vc=lower(vc);
+            if(contains(vc,'.boolean'))
+                val=logical(nval);
+            elseif(contains(vc,'.double'))
+                val=double(nval);
+            elseif(contains(vc,'.single'))
+                val=single(nval);
+            elseif(contains(vc,'.sbyte'))
+                val=int8(nval);
+            elseif(contains(vc,'.byte'))
+                val=uint8(nval);
+            elseif(contains(vc,'.uint16'))
+                val=uint16(nval);
+            elseif(contains(vc,'.int16'))
+                val=int16(nval);
+            elseif(contains(vc,'.uint32'))
+                val=uint32(nval);
+            elseif(contains(vc,'.int32'))
+                val=int32(nval);
+            elseif(contains(vc,'.uint64'))
+                val=uint64(nval);
+            elseif(contains(vc,'.int64'))
+                val=int64(nval);
+            elseif(contains(vc,'.char'))
+                val=char(nval);
+            elseif(contains(vc,'.string')) % string will become char.
+                val=char(nval);
+            elseif(contains(vc,'logical'))
+                val=logical(nval);
+            end
+        end
     end
+    
     
     methods(Static)
         function [apath]=GetAssemblyLocationFromCurrentFileLocation()

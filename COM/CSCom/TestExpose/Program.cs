@@ -13,6 +13,7 @@ namespace TestExpose
         static EasyConsole.Menu menu;
         static bool SilentSetMode = false;
         static int SilentSetModeCount = 0;
+        static int WaitOnMessageRecived = 400;
 
         static void Main(string[] args)
         {
@@ -29,7 +30,6 @@ namespace TestExpose
                 .Add("Listen", () =>
                 {
                     Com.Listen();
-
                     Console.WriteLine("Listening for connections.");
                 })
                 .Add("Flip logging", () =>
@@ -74,7 +74,7 @@ namespace TestExpose
                      int a = int.TryParse(thevalue, out a) ? a : 1000;
                      theprop = theprop == "" ? "TestMatrix" : theprop;
                      Array mat = MakeLargeNumericMatrix<double>(a);
-                     Com.Send(NPMessageType.Set, "", new NPMessageNamepathData(theprop, mat),true);
+                     Com.Send(NPMessageType.Set, "", new NPMessageNamepathData(theprop, mat), true);
                      Console.WriteLine("Updating " + theprop + " with matrix of length " + mat.Length);
                  })
                  .Add("Send repeating large matrix until stopped.", () =>
@@ -86,8 +86,8 @@ namespace TestExpose
 
                      int a = int.TryParse(thevalue, out a) ? a : 1000;
                      theprop = theprop == "" ? "TestMatrix" : theprop;
-                    
-                     Console.WriteLine("Starting continues updates of " + theprop + " with matrix of length " + a*a);
+
+                     Console.WriteLine("Starting continues updates of " + theprop + " with matrix of length " + a * a);
                      bool isRunning = true;
                      Task.Run(() =>
                      {
@@ -103,12 +103,45 @@ namespace TestExpose
                      Console.ReadKey();
                      isRunning = false;
                  })
+                 .Add("Send fast large matrix to update, (Fail on labview?)", ()=>
+                 {
+                     Console.WriteLine("Waht is the property to set (string)? [<enter> = 'TestMatrix']");
+                     string theprop = Console.ReadLine();
+                     Console.WriteLine("Delay between sends [ms] ? [<enter> = '100']");
+                     string thevalue = Console.ReadLine();
+                     Console.WriteLine("# of messages to send ? [<enter> = '100']");
+                     string thecount = Console.ReadLine();
+
+                     int dt = int.TryParse(thevalue, out dt) ? dt : 100;
+                     int n = int.TryParse(thecount, out n) ? n : 100;
+                     bool isRunning = true;
+                     int sentCount = 0;
+                     Task.Run(() =>
+                     {
+                         while (isRunning)
+                         {
+                             System.Threading.Thread.Sleep(dt);
+                             Array mat = MakeLargeNumericMatrix<double>(1000);
+                             Com.Send(NPMessageType.Set, "", new NPMessageNamepathData(theprop, mat), false);
+                             sentCount++;
+                             if(sentCount>n)
+                             {
+                                 Console.WriteLine("Completed send of " + sentCount + " messages");
+                                 isRunning = false;
+                             }
+                         }
+                     });
+
+                     Console.WriteLine("Any key to stop.");
+                     Console.ReadKey();
+                     isRunning = false;
+                     Console.WriteLine("Sent " + sentCount + " messages.");
+                 })
                  .Add("Flip set silent mode",()=>
                  {
                      SilentSetMode = !SilentSetMode;
                      SilentSetModeCount = 0;
                      Console.WriteLine("Silent set moe: " + SilentSetMode);
-                     
                  })
                  .Add("Test get response: ",()=>
                  {
@@ -138,7 +171,7 @@ namespace TestExpose
 
             
             
-            Com.MessageRecived += Client_MessageRecived;
+            Com.MessageRecived += On_MessageRecived;
             Com.Log += Client_Log;
 
             while (continuteToNext)
@@ -168,7 +201,8 @@ namespace TestExpose
         private static void WS_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
             Console.WriteLine(e.Message);
-            throw e.Exception;
+            Console.WriteLine(e.Exception.ToString());
+            //throw e.Exception;
         }
 
         private static void Client_Log(object sender, CSCom.CSCom.LogEventArgs e)
@@ -176,8 +210,10 @@ namespace TestExpose
             Console.WriteLine(e.Message);
         }
 
-        private static void Client_MessageRecived(object sender, WebsocketPipe.WebsocketPipe<NPMessage>.MessageEventArgs e)
+        private static void On_MessageRecived(object sender, WebsocketPipe.WebsocketPipe<NPMessage>.MessageEventArgs e)
         {
+            if (WaitOnMessageRecived > 0)
+                System.Threading.Thread.Sleep(WaitOnMessageRecived);
 
             if (e.Message == null)
             {
@@ -188,6 +224,7 @@ namespace TestExpose
             if (SilentSetMode && e.Message.MessageType == NPMessageType.Set)
             {
                 SilentSetModeCount++;
+                Console.WriteLine("Recived " + SilentSetModeCount);
                 return;
             }
 

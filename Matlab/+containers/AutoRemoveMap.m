@@ -114,7 +114,7 @@ classdef AutoRemoveMap < handle
             rt=false;
             ev=[];
             if(col.contains(id))
-                ev=AutoRemoveMapRemoveEvent(col.ObjectByID(id),id);
+                ev=containers.AutoRemoveMapRemoveEvent(col.ObjectByID(id),id);
             end
             if(col.ObjectByID.isKey(id))
                 col.ObjectByID.remove(id);

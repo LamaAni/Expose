@@ -75,15 +75,9 @@ classdef CSComMessageNamepathData < handle
             for i=1:length(namepaths)
                 namepath=namepaths{i};
                 val=map(namepath);
-                npd=val;
                 
                 if(hasCompTo && compareTo.isKey(namepath))
-                    compareVal=compareTo(namepath);
-                else
-                    compareVal=[];
-                end
-                if(~isempty(compareVal))
-                    npd=CSComMessageNamepathData.FromValue(namepath,compareVal);
+                    npd=CSComMessageNamepathData.FromValue(namepath,val,compareVal);
                 else
                     npd=CSComMessageNamepathData.FromValue(namepath,val);
                 end

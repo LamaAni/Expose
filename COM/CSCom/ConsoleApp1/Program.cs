@@ -10,11 +10,12 @@ namespace Tester
 {
     class Program
     {
+        static int WaitAtServer = 1000;
+        static int WaitAtClient = 400;
         static void Main(string[] args)
         {
             bool doSelfServer = true;
             bool waitBeforeStopping = true;
-
             CSCom.CSCom server = null;
             if (doSelfServer)
             {
@@ -43,6 +44,7 @@ namespace Tester
             {
                 Console.WriteLine("Connected to server.");
                 int imgsize = 3000;
+                int n = 10;
                 var valToSend = new float[imgsize,imgsize];
                 Random r = new Random();
                 for (int i = 0; i < imgsize; i++)
@@ -57,12 +59,14 @@ namespace Tester
                 Console.WriteLine();
 
                 Stopwatch watch = new Stopwatch();
-                Console.WriteLine("Sending large message....");
+                Console.WriteLine("Sending " + n + " large messages....");
                 Console.WriteLine();
                 watch.Start();
-                rsp = client.Send(NPMessage.FromValue(valToSend, NPMessageType.Invoke, "lama"), true);
+                for (int i = 0; i < n; i++)
+                    rsp = client.Send(NPMessage.FromValue(valToSend, NPMessageType.Invoke, "lama"), false);
                 watch.Stop();
                 Console.WriteLine();
+
                 if (waitBeforeStopping || doSelfServer)
                 {
                     Console.WriteLine("Waited for send[ms]: " + watch.Elapsed.TotalMilliseconds);
@@ -96,25 +100,39 @@ namespace Tester
 
         private static void Clinet_MessageRecived(object sender, WebsocketPipe.WebsocketPipe<CSCom.NPMessage>.MessageEventArgs e)
         {
-            if (e.Message.MessageType == CSCom.NPMessageType.Error)
+            Task.Run(() =>
             {
-                Console.WriteLine("************************\nError recived from client:\n" + e.Message.Text);
-                return;
-            }
+                if (e.Message.MessageType == CSCom.NPMessageType.Error)
+                {
+                    Console.WriteLine("************************\nError recived from client:\n" + e.Message.Text);
+                    return;
+                }
 
-            Console.WriteLine("Client recived " + (e.Message.Text == null ? "Empty message." : "\"" + e.Message.Text + "\""));
+                Console.WriteLine("Client recived " + (e.Message.Text == null ? "Empty message." : "\"" + e.Message.Text + "\""));
+            });
+
         }
 
         private static void Server_MessageRecived1(object sender, WebsocketPipe.WebsocketPipe<CSCom.NPMessage>.MessageEventArgs e)
         {
-            e.Response = new NPMessage(NPMessageType.Warning, null, "kka");
-            if(e.Message.MessageType== CSCom.NPMessageType.Error)
+            Task.Run(() =>
             {
-                Console.WriteLine("************************\nError recived from client:\n" + e.Message.Text);
-                return;
-            }
-            CSCom.CSCom server = (CSCom.CSCom)sender;
-            Console.WriteLine("Recived map with " + e.Message.NamepathsCount + " name paths");
+                if (e.RequiresResponse)
+                {
+                    e.Response = new NPMessage(NPMessageType.Warning, null, "kka");
+                }
+
+                if (e.Message.MessageType == CSCom.NPMessageType.Error)
+                {
+                    Console.WriteLine("************************\nError recived from client:\n" + e.Message.Text);
+                    return;
+                }
+
+                Console.WriteLine("Recived map with " + e.Message.NamepathsCount + " name paths.");
+            });
+
+            if (WaitAtServer > 0)
+                System.Threading.Thread.Sleep(WaitAtServer);
         }
     }
 }

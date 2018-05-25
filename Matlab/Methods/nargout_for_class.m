@@ -1,11 +1,14 @@
-function nout = nargout_for_class(obj,funcName)
-  mc=metaclass(obj);
+function [nout,argnames] = nargout_for_class(obj,funcName)
   nout=-1;
-  names={mc.MethodList.Name};
-  outputNames={mc.MethodList.OutputNames};
-  nameIdx=find(strcmp(names,funcName));
-  if(~isempty(nameIdx))
-      idx=nameIdx(1);
-      nout=length(outputNames{idx});
+  argnames={};
+  
+  mc=metaclass(obj);
+  allmethodnames={mc.MethodList.Name};
+  idx=find(strcmp(allmethodnames,funcName));
+  if(isempty(idx))
+      return;
   end
+  moutputs={mc.MethodList.OutputNames};  
+  argnames=moutputs{idx};
+  nout=length(argnames);
 end

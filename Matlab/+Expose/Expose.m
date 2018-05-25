@@ -73,12 +73,15 @@ classdef Expose < handle
     methods(Access = protected)
         function onLog(obj,s,e)
             % call to get the handler since we are logging.
-            if(obj.TraceLogs)
+            if(~isvalid(obj)||obj.TraceLogs)
                 disp(e.Message);
             end
         end
         
         function onMessage(obj,s,e)
+            if(~isvalid(obj))
+                return;
+            end
             % events must be of type ExposeEventStruct.
             import Expose.Core.*;
             if(~isa(e,'Expose.Core.ExposeMessageEventStruct'))
@@ -109,12 +112,16 @@ classdef Expose < handle
                     if(ismethod(hndl,e.Message.Text))
                         args=e.Message.SetTo();
                         nao=nargout_for_class(hndl,e.Message.Text);
+                        nai=nargin_for_class(hndl,e.Message.Text);
                         if(isempty(args))
                             args={};
                         elseif(~iscell(args))
                             args={args};
                         end
                         args{end+1}=e;
+                        if(length(args)>nai)
+                            args=args(1:nai);
+                        end
                         if(nao==1)
                             e.Response=hndl.(e.Message.Text)(args{:});
                         elseif(nao>1)
@@ -150,7 +157,7 @@ classdef Expose < handle
             if(~exist('name','var') && exist('toID','var'))
                 name=toID;
                 toID=[];
-            end            
+            end
             if(~exist('toID','var'))
                 toID=[];
             end

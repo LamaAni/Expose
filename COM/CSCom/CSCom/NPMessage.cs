@@ -173,17 +173,24 @@ namespace CSCom
             {
                 case ValueSerializationType.FastArray:
                     // Reding the dimensions.
-                    int[] dims= (int[])info.GetValue("dims", typeof(int[]));
+                    try
+                    {
+                        int[] dims = (int[])info.GetValue("dims", typeof(int[]));
 
-                    // reading the value.
-                    vtype = (Type)info.GetValue("Value.Type", typeof(Type));
-                    Array stored = (Array)info.GetValue("Value", vtype);
+                        // reading the value.
+                        vtype = (Type)info.GetValue("Value.Type", typeof(Type));
+                        Array stored = (Array)info.GetValue("Value", vtype);
 
-                    // converting to new array.
-                    Array val = Array.CreateInstance(vtype.GetElementType(), dims);
-                    //Array.Copy(stored, val, stored.Length);
-                    Buffer.BlockCopy(stored, 0, val, 0, stored.Length* Marshal.SizeOf(vtype.GetElementType()));
-                    Value = val;
+                        // converting to new array.
+                        Array val = Array.CreateInstance(vtype.GetElementType(), dims);
+                        //Array.Copy(stored, val, stored.Length);
+                        Buffer.BlockCopy(stored, 0, val, 0, stored.Length * Marshal.SizeOf(vtype.GetElementType()));
+                        Value = val;
+                    }
+                    catch(Exception ex)
+                    {
+                        throw new Exception("Error at special serialization of NPMessageNamepathInfo",ex);
+                    }
                     break;
                 case ValueSerializationType.Normal:
                     vtype = (Type)info.GetValue("Value.Type", typeof(Type));
