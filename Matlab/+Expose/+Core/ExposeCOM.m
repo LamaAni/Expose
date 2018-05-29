@@ -17,6 +17,7 @@ classdef ExposeCOM<handle
         Listen(obj);
         Connect(obj);
         Stop(obj);
+        [varargout]=Send(obj,toId,msg,mtype,data,requireResponse);
     end
 end
 

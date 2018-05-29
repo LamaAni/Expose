@@ -20,6 +20,7 @@ namespace CSCom
         public CSCom(string comServiceAddress = "ws://localhost:50000/CSCom")
         {
             Pipe = new WebsocketPipe<NPMessage>(new Uri(comServiceAddress));
+            Pipe.Timeout = 30000;
 
             Pipe.LogMethod = (id,s) =>
             {

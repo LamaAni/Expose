@@ -13,6 +13,9 @@ classdef Expose < handle
             obj.Com=com;
             com.addlistener('MessageRecived',@obj.onMessage);
             com.addlistener('Log',@obj.onLog);
+            obj.asyncUpdateEventDispatch=events.CSDelayedEventDispatch();
+            obj.asyncUpdateEventDispatch.addlistener('Ready',...
+                @obj.onAsyncUpdateEventDispatchReady);
         end
     end
         
@@ -161,6 +164,10 @@ classdef Expose < handle
             if(~exist('toID','var'))
                 toID=[];
             end
+            if(isempty(hndl))
+                warning('Empty handler returned for invoke message.');
+                return;
+            end            
             hndl=exp.GetHandler(toID);
             if(~exist('name','var') || isempty(name) || ~ischar(name))
                 error('Please provide a method name. (char array)');
@@ -183,7 +190,7 @@ classdef Expose < handle
         end
         
         % calls to update the specific parameter to the remote value.
-        function Update(exp,toID,name)
+        function Update(exp,toID,name,direct)
             import Expose.Core.*;
             if(~exist('name','var') && exist('toID','var'))
                 name=toID;
@@ -193,6 +200,10 @@ classdef Expose < handle
                 toID=[];
             end
             hndl=exp.GetHandler(toID);
+            if(isempty(hndl))
+                warning('Empty handler returned for update message.');
+                return;
+            end
             if(~exist('name','var'))
                 name=fieldnames(hndl);
             end
@@ -206,8 +217,24 @@ classdef Expose < handle
                 name={name};
             end
             hasValues=0;
+            
+            if(~direct)
+                if(isempty(exp.pendingUpdates))
+                    exp.pendingUpdates=containers.Map;
+                end
+                if(~exp.pendingUpdates.isKey(toID))
+                    exp.pendingUpdates(toID)=name;
+                else
+                    conc=exp.pendingUpdates(toID);
+                    conc(end+1:end+length(name))=name;
+                    exp.pendingUpdates(toID)=conc;
+                end
+                exp.asyncUpdateEventDispatch.trigger(1);
+                return;
+            end
 
             data=struct();
+            name=unique(name);
             for i=1:length(name)
                 pn=name{i};
                 if(~isprop(hndl,pn) && ~isfield(hndl,pn))
@@ -218,13 +245,55 @@ classdef Expose < handle
             end
             if(~hasValues)
                 return;
-            end           
+            end
             exp.Com.Send(toID,name,ExposeMessageType.Set,data);
         end
         
         % retrives data from the client/server.
         function Get(exp,toID,name)
             import Expose.*;
+            if(~exist('name','var') && exist('toID','var'))
+                name=toID;
+                toID=[];
+            end
+            if(~exist('toID','var'))
+                toID=[];
+            end
+            hndl=exp.GetHandler(toID);
+            if(isempty(hndl))
+                warning('Empty handler returned for get message.');
+                return;
+            end
+            if(~exist('name','var'))
+                name=fieldnames(hndl);
+            end
+            if(isempty(name))
+                return;
+            end
+            if(~iscell(name))
+                name={name};
+            end            
+        end
+    end
+    
+    properties(Access = private)
+        asyncUpdateEventDispatch=[];
+        pendingUpdates=[];
+    end
+    
+    methods(Access = private)
+        function onAsyncUpdateEventDispatchReady(obj,s,e)
+            if(isempty(obj.pendingUpdates))
+                return;
+            end
+            updates=obj.pendingUpdates;
+            obj.pendingUpdates=[];
+            ids=updates.keys;
+            names=updates.values;
+            for i=1:length(ids)
+                id=ids{i};
+                obj.Update(id,names{i},true);
+            end
         end
     end
 end

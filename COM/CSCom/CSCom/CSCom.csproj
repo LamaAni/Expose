@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CSCom.cs" />
+    <Compile Include="DelayedEventDispatch.cs" />
     <Compile Include="EventBoundReference.cs" />
     <Compile Include="FastLVNetObjConverter.cs" />
     <Compile Include="NPMessage.cs" />

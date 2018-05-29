@@ -31,8 +31,9 @@ classdef CSCom < Expose.Core.ExposeCOM
             obj.Url=url;
             obj.NetO=CSCom.CSCom(url);
             obj.NetO.DoLogging=true;
+            obj.NetO.Timeout=10000;
             obj.NetO.ASynchroniusEventExecution=true;
-            obj.NetO.ASynchroniusEventExecutionTimeout=obj.ComEventTimeout;
+            %obj.NetO.ASynchroniusEventExecutionTimeout=obj.ComEventTimeout;
             obj.NetO.addlistener('Log',@obj.onLog);
             obj.NetO.addlistener('MessageRecived',@obj.onMessage);            
         end
@@ -52,7 +53,8 @@ classdef CSCom < Expose.Core.ExposeCOM
     
     properties
         TraceLogs=false;
-        ComEventTimeout=10000; %ms
+        %ComEventTimeout=10000; %ms
+        %Timeout=10000;
     end
     
     properties (SetAccess = private)
@@ -155,8 +157,9 @@ classdef CSCom < Expose.Core.ExposeCOM
                 msg=toID;
                 toID='';
             end
+            
             msg=Expose.CSCom.removeHtmlTags(msg);
-            msg=CSComMessage(msg,ExposeMessageType.Warning);
+            msg=Expose.CSCom.CSComMessage(msg,Expose.Core.ExposeMessageType.Warning);
             obj.Send(toID,msg);
         end
     end
