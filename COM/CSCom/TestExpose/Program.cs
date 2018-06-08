@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,7 +25,6 @@ namespace TestExpose
                 .Add("Connect", () =>
                 {
                     Com.Connect();
-                    Com.Pipe.WS.OnError += WS_OnError;
                     Console.WriteLine("Connected to remote.");
                 })
                 .Add("Listen", () =>
@@ -103,7 +103,15 @@ namespace TestExpose
                      Console.ReadKey();
                      isRunning = false;
                  })
-                 .Add("Send fast large matrix to update, (Fail on labview?)", ()=>
+                 .Add("Send Bing and small", () =>
+                 {
+                     Console.WriteLine("Sending big and small data to check data sync.");
+                     Console.WriteLine("Send big (no need for response).");
+                     Com.Send(NPMessage.FromValue(new double[10000], NPMessageType.Set, "big"));
+                     Console.WriteLine("Send small (need for response).");
+                     Com.Send(NPMessage.FromValue("", NPMessageType.Invoke, "small"), true);
+                 })
+                 .Add("Send fast large matrix to update, (Fail on labview?)", () =>
                  {
                      Console.WriteLine("Waht is the property to set (string)? [<enter> = 'TestMatrix']");
                      string theprop = Console.ReadLine();
@@ -124,7 +132,7 @@ namespace TestExpose
                              Array mat = MakeLargeNumericMatrix<double>(1000);
                              Com.Send(NPMessageType.Set, "", new NPMessageNamepathData(theprop, mat), false);
                              sentCount++;
-                             if(sentCount>n)
+                             if (sentCount > n)
                              {
                                  Console.WriteLine("Completed send of " + sentCount + " messages");
                                  isRunning = false;
@@ -137,40 +145,287 @@ namespace TestExpose
                      isRunning = false;
                      Console.WriteLine("Sent " + sentCount + " messages.");
                  })
-                 .Add("Flip set silent mode",()=>
+                 .Add("Flip set silent mode", () =>
+                  {
+                      SilentSetMode = !SilentSetMode;
+                      SilentSetModeCount = 0;
+                      Console.WriteLine("Silent set moe: " + SilentSetMode);
+                  })
+                 .Add("Test get response: ", () =>
+                  {
+                      Console.WriteLine("Waht is the property to get? [<enter> = 'TestString']");
+                      string theprop = Console.ReadLine();
+                      if (theprop.Length == 0)
+                          theprop = "TestString,TestMatrix";
+
+                      string[] props = theprop.Split(',').Select(p => p.Trim()).ToArray();
+
+                      NPMessage rsp = Com.Get(props);
+
+                      // printing the information gathered.
+                      if (rsp == null || rsp.NamePaths == null)
+                      {
+                          Console.WriteLine("Property '" + theprop + "' not found.");
+                      }
+                      else
+                      {
+                          Console.WriteLine("Got Property '" + theprop + "':");
+                          foreach (var npd in rsp.NamePaths)
+                          {
+                              Console.WriteLine("\t" + npd.Namepath + "(" + npd.Value.GetType() + "): " + npd.Value);
+                          }
+                      }
+                  })
+                 .Add("Test websocket client server", () =>
                  {
-                     SilentSetMode = !SilentSetMode;
-                     SilentSetModeCount = 0;
-                     Console.WriteLine("Silent set moe: " + SilentSetMode);
-                 })
-                 .Add("Test get response: ",()=>
-                 {
-                     Console.WriteLine("Waht is the property to get? [<enter> = 'TestString']");
-                     string theprop = Console.ReadLine();
-                     if (theprop.Length == 0)
-                         theprop = "TestString,TestMatrix";
-
-                     string[] props = theprop.Split(',').Select(p => p.Trim()).ToArray();
-
-                     NPMessage rsp = Com.Get(props);
-
-                     // printing the information gathered.
-                     if(rsp == null || rsp.NamePaths==null)
+                     Console.WriteLine("Client server test");
+                     WebsocketPipe.WebsocketPipeWS server = new WebsocketPipe.WebsocketPipeWS(new Uri("ws://localhost:50001/CSCom"));
+                     WebsocketPipe.WebsocketPipeWS client = new WebsocketPipe.WebsocketPipeWS(new Uri("ws://localhost:50001/CSCom"));
+                     int smsgIdx = 0, cmsgIdx = 0;
+                     Action<string, int, byte[]> pnt = (caller, idx, data) =>
+                       {
+                           Console.WriteLine(caller + " recived msg (#" + idx + "), with " + (data == null ? 0 : data.Length) + " bytes");
+                       };
+                     server.MessageRecived += (s, e) =>
                      {
-                         Console.WriteLine("Property '" + theprop + "' not found.");
+                         pnt("server", smsgIdx, e.Data);
+                         smsgIdx++;
+                     };
+                     client.MessageRecived += (s, e) =>
+                     {
+                         pnt("client", cmsgIdx, e.Data);
+                         cmsgIdx++;
+                     };
+                     server.Listen();
+                     client.Connect();
+                     byte[] bigdata = new byte[10000];
+                     byte[] smalldata = new byte[1];
+                     Console.WriteLine("Connected.");
+                     Console.WriteLine("Sending from client:");
+                     int n = 5;
+                     for (int i = 0; i < n; i++)
+                     {
+                         client.Send(bigdata);
+                         client.Send(smalldata);
                      }
-                     else
+                     System.Threading.Thread.Sleep(1000);
+                     Console.WriteLine("Sending from server:");
+                     for (int i = 0; i < n; i++)
                      {
-                         Console.WriteLine("Got Property '" + theprop + "':");
-                         foreach (var npd in rsp.NamePaths)
+                         server.Send(bigdata);
+                         server.Send(smalldata);
+                     }
+
+                     System.Threading.Thread.Sleep(1000);
+                     client.Stop();
+                     server.Stop();
+                 })
+                 .Add("Test websocket pipe client server", () =>
+                 {
+                     Console.WriteLine("Client server test");
+                     WebsocketPipe.WebsocketPipe<byte[]> server = new WebsocketPipe.WebsocketPipe<byte[]>(new Uri("ws://localhost:50001/CSCom"));
+                     WebsocketPipe.WebsocketPipe<byte[]> client = new WebsocketPipe.WebsocketPipe<byte[]>(new Uri("ws://localhost:50001/CSCom"));
+                     server.Timeout = 1000;
+                     client.Timeout = 1000;
+
+                     int smsgIdx = 0, cmsgIdx = 0;
+                     object loglock = new object();
+                     Action<string, int, byte[], int> pnt = (caller, idx, data, inblock) =>
+                     {
+
+                             Console.WriteLine(caller + " recived msg (#" + idx + "), with " + (data == null ? 0 : data.Length) + " bytes, " + inblock + " in block");
+                     };
+                     server.MessageRecived += (s, e) =>
+                     {
+                         lock (loglock)
                          {
-                             Console.WriteLine("\t" + npd.Namepath + "(" + npd.Value.GetType() + "): " + npd.Value);
+                             pnt("server", smsgIdx, e.Message, e.NumberOfMessagesInBlock);
+                             smsgIdx++;
+                         }
+                     };
+                     client.MessageRecived += (s, e) =>
+                     {
+                         lock (loglock)
+                         {
+                             pnt("client", cmsgIdx, e.Message, e.NumberOfMessagesInBlock);
+                             cmsgIdx++;
+                         }
+                     };
+                     server.Listen();
+                     System.Threading.Thread.Sleep(10);
+                     client.Connect();
+                     System.Threading.Thread.Sleep(10);
+                     byte[] bigdata = new byte[1000000];
+                     byte[] smalldata = new byte[1];
+                     Console.WriteLine("Connected.");
+                     Console.WriteLine("Sending from client:");
+                     int n = 5;
+                     for (int i = 0; i < n; i++)
+                     {
+                         client.Send(bigdata);
+                         client.Send(smalldata);
+                     }
+                     Console.WriteLine("Completed sending, waiting for recive.");
+                     while (smsgIdx < n)
+                     {
+                         System.Threading.Thread.Sleep(10);
+                     }
+                     System.Threading.Thread.Sleep(10);
+                     Console.WriteLine("Sending from server:");
+                     for (int i = 0; i < n; i++)
+                     {
+                         server.Send(bigdata);
+                         server.Send(smalldata);
+                     }
+                     Console.WriteLine("Completed sending, waiting for recive.");
+                     while (cmsgIdx < n)
+                     {
+                         System.Threading.Thread.Sleep(10);
+                     }
+                     System.Threading.Thread.Sleep(10);
+                     Console.WriteLine("Complete. Closing.");
+                     client.Stop();
+                     server.Stop();
+
+                     client.Dispose();
+                     server.Dispose();
+                 })
+                 .Add("Test memory mapped file stack", () =>
+                 {
+                     WebsocketPipe.MemoryMappedBinaryStack stack = new WebsocketPipe.MemoryMappedBinaryStack("Lama this stack");
+                     List<byte[]> els = new List<byte[]>();
+                     int n = 100;
+                     Random rn = new Random();
+                     int totalSize = 0;
+                     Console.WriteLine("Writing arrays of sizes:");
+                     for (int i = 0; i < n; i++)
+                     {
+                         byte[] ar = new byte[rn.Next(1000000)];
+                         totalSize += ar.Length;
+                         els.Add(ar);
+                         Console.Write((i == 0 ? "" : ", ") + ar.Length);
+                     }
+                     Console.WriteLine();
+
+                     Stopwatch watch = new Stopwatch();
+                     watch.Start();
+                     //stack.Lock();
+                     foreach (byte[] ar in els)
+                         stack.Push(ar);
+                     //stack.UnLock();
+                     watch.Stop();
+                     Console.WriteLine();
+                     Console.WriteLine("Pushed total of " + totalSize + " [bytes] in " + els.Count + " elements in [ms]: " + watch.Elapsed.TotalMilliseconds);
+                     Console.WriteLine("Reading...");
+                     watch.Reset();
+                     watch.Start();
+                     //stack.Lock();
+                     for (int i = 0; i < els.Count; i++)
+                     {
+                         byte[] read = stack.Pop();
+                         byte[] shouldBe = els[els.Count - i - 1];
+                         Console.WriteLine("read " + read.Length + " ?= " + shouldBe.Length + " " + (read.Length == shouldBe.Length ? "OK" : "ERROR"));
+                     }
+                     //stack.UnLock();
+                     
+                     Console.WriteLine("Read total of " + totalSize + " [bytes] in " + els.Count + " elements in [ms]: " + watch.Elapsed.TotalMilliseconds);
+
+                     watch.Reset();
+                     watch.Start();
+                     stack.Push(els.ToArray());
+                     watch.Stop();
+                     Console.WriteLine("Multipush same array in [ms] " + watch.Elapsed.TotalMilliseconds);
+
+                     watch.Reset();
+                     watch.Start();
+                     byte[][] readEls = stack.Empty().Reverse().ToArray();
+                     watch.Stop();
+                     Console.WriteLine("Multipop (empty) same array in [ms] " + watch.Elapsed.TotalMilliseconds);
+                     int errored = 0;
+                     for (int i = 0; i < els.Count; i++)
+                     {
+                         byte[] read = readEls[i];
+                         byte[] shouldBe = els[i];
+                         if (read.Length != shouldBe.Length)
+                         {
+                             Console.WriteLine("read " + read.Length + " ?= " + shouldBe.Length + " -> ERROR");
+                             errored++;
                          }
                      }
+                     Console.WriteLine(errored+ " errors found.");
+
+                     stack.Dispose();
+                 })
+                 .Add("Test memory mapped file queue", () =>
+                 {
+                     WebsocketPipe.MemoryMappedBinaryQueue queue = new WebsocketPipe.MemoryMappedBinaryQueue("Lama this stack");
+                     List<byte[]> els = new List<byte[]>();
+                     int n = 100;
+                     Random rn = new Random();
+                     int totalSize = 0;
+                     Console.WriteLine("Writing arrays of sizes:");
+                     for (int i = 0; i < n; i++)
+                     {
+                         byte[] ar = new byte[rn.Next(1000000)];
+                         ar[0] = 1;
+                         totalSize += ar.Length;
+                         els.Add(ar);
+                         Console.Write((i == 0 ? "" : ", ") + ar.Length);
+                     }
+                     Console.WriteLine();
+
+                     Stopwatch watch = new Stopwatch();
+                     watch.Start();
+                     //stack.Lock();
+                     foreach (byte[] ar in els)
+                         queue.Enqueue(ar);
+                     //stack.UnLock();
+                     watch.Stop();
+                     Console.WriteLine();
+                     Console.WriteLine("Pushed total of " + totalSize + " [bytes] in " + els.Count + " elements in [ms]: " + watch.Elapsed.TotalMilliseconds);
+                     Console.WriteLine("Reading...");
+                     watch.Reset();
+                     watch.Start();
+                     //stack.Lock();
+                     for (int i = 0; i < els.Count; i++)
+                     {
+                         byte[] read = queue.Dequeue();
+                         byte[] shouldBe = els[i];
+                         Console.WriteLine("read " + read.Length + " ?= " + shouldBe.Length + " " + (read.Length == shouldBe.Length ? "OK" : "ERROR"));
+                     }
+                     //stack.UnLock();
+
+                     Console.WriteLine("Read total of " + totalSize + " [bytes] in " + els.Count + " elements in [ms]: " + watch.Elapsed.TotalMilliseconds);
+
+                     watch.Reset();
+                     watch.Start();
+                     queue.Enqueue(els.ToArray());
+                     watch.Stop();
+                     Console.WriteLine("Multipush same array in [ms] " + watch.Elapsed.TotalMilliseconds);
+
+                     watch.Reset();
+                     watch.Start();
+                     byte[][] readEls = queue.Empty().ToArray();
+                     watch.Stop();
+                     Console.WriteLine("Multipop (empty) same array in [ms] " + watch.Elapsed.TotalMilliseconds);
+                     int errored = 0;
+                     for (int i = 0; i < els.Count; i++)
+                     {
+                         byte[] read = readEls[i];
+                         byte[] shouldBe = els[i];
+                         if (read.Length != shouldBe.Length)
+                         {
+                             Console.WriteLine("read " + read.Length + " ?= " + shouldBe.Length + " -> ERROR");
+                             errored++;
+                         }
+                     }
+                     Console.WriteLine(errored + " errors found.");
+
+                     queue.Dispose();
                  });
 
-            
-            
+
+
             Com.MessageRecived += On_MessageRecived;
             Com.Log += Client_Log;
 
@@ -198,18 +453,13 @@ namespace TestExpose
             return mat;
         }
 
-        private static void WS_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
-        {
-            Console.WriteLine(e.Message);
-            Console.WriteLine(e.Exception.ToString());
-            //throw e.Exception;
-        }
-
         private static void Client_Log(object sender, CSCom.CSCom.LogEventArgs e)
         {
             Console.WriteLine(e.Message);
         }
 
+        static Task m_writeSelect = null;
+        static DateTime m_writeSelectAt = new DateTime();
         private static void On_MessageRecived(object sender, WebsocketPipe.WebsocketPipe<NPMessage>.MessageEventArgs e)
         {
             if (WaitOnMessageRecived > 0)
@@ -229,7 +479,10 @@ namespace TestExpose
             }
 
             Console.WriteLine();
-            Console.WriteLine("Recived message from " + (Com.IsListening ? "client" : "server") + " of type: " + e.Message.MessageType + (e.RequiresResponse ? "(Requires response)" : ""));
+            Console.WriteLine("Recived message from " +
+                e.WebsocketID + (Com.IsListening ? " (client)" : " (server)") +
+                ": " + e.Message.MessageType + (e.RequiresResponse ? "(Requires response)" : "") +
+                (e.NumberOfMessagesInBlock > 1 ? " (BN:" + e.NumberOfMessagesInBlock + ")" : ""));
 
             switch(e.Message.MessageType)
             {
@@ -239,11 +492,24 @@ namespace TestExpose
                 case NPMessageType.Error:
                     Console.WriteLine("************************\nError recived from client:\n" + e.Message.Text);
                     break;
+                case NPMessageType.Create:
+                case NPMessageType.Destroy:
+                    break;
                 case NPMessageType.Invoke:
-                    if (e.Message.Text == "GetSilentModeCount")
+                    switch (e.Message.Text)
                     {
-                        Console.WriteLine("Mode count: " + SilentSetModeCount);
-                        e.Response = NPMessage.FromValue(SilentSetModeCount);
+                        case "GetSilentModeCount":
+                            {
+                                Console.WriteLine("Mode count: " + SilentSetModeCount);
+                                e.Response = NPMessage.FromValue(SilentSetModeCount);
+                            }
+                            break;
+                        case "static.OpenExperiment":
+                            e.Response = NPMessage.FromValue("dummyid");
+                            break;
+                        default:
+                            Console.WriteLine("Unknown function called, " + e.Message.Text);
+                            break;
                     }
                     Console.WriteLine("Unhandled invoke: \n" + e.Message);
                     break;
@@ -252,8 +518,20 @@ namespace TestExpose
                     
                     break;
             }
-            Console.WriteLine();
-            Console.WriteLine("Select: ");
+            m_writeSelectAt = DateTime.Now + TimeSpan.FromSeconds(1);
+            if (m_writeSelect == null)
+            {
+                m_writeSelect = new Task(() =>
+                  {
+                      while (m_writeSelectAt > DateTime.Now)
+                          System.Threading.Thread.Sleep(10);
+                      Console.WriteLine("Select: ");
+                      m_writeSelect = null;
+                  });
+                m_writeSelect.Start();
+            }
+            //Console.WriteLine();
+            
         }
     }
 }

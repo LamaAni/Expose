@@ -91,6 +91,8 @@ classdef Expose < handle
                 error('Expose events must implement ExposeEventStruct');
             end
             
+            %disp([e.CallerID,': msgT->',num2str(e.Message.MessageType)]);
+            
             % need to translate the message according to the required
             % parameters.
             switch(e.Message.MessageType)
@@ -201,7 +203,7 @@ classdef Expose < handle
             end
             hndl=exp.GetHandler(toID);
             if(isempty(hndl))
-                warning('Empty handler returned for update message.');
+                disp(['Empty handler found for id: ',toID,', update ignored.']);
                 return;
             end
             if(~exist('name','var'))

@@ -32,7 +32,7 @@ classdef CSCom < Expose.Core.ExposeCOM
             obj.NetO=CSCom.CSCom(url);
             obj.NetO.DoLogging=true;
             obj.NetO.Timeout=10000;
-            obj.NetO.ASynchroniusEventExecution=true;
+            obj.NetO.RequiresAsyncEventLock=true;
             %obj.NetO.ASynchroniusEventExecutionTimeout=obj.ComEventTimeout;
             obj.NetO.addlistener('Log',@obj.onLog);
             obj.NetO.addlistener('MessageRecived',@obj.onMessage);            
@@ -186,6 +186,9 @@ classdef CSCom < Expose.Core.ExposeCOM
                 lastwarn(''); %reset the state of the last warning.
                 
                 id=CSCom.NetValueToRawData(e.WebsocketID);
+                if(isempty(id))
+                    error('Recived message with no websocket id.');
+                end
                 msg=CSComMessage.FromNetObject(e.Message);
                 requireRsp=CSCom.NetValueToRawData(e.RequiresResponse);
                 
@@ -212,20 +215,24 @@ classdef CSCom < Expose.Core.ExposeCOM
                             rmsg=CSComMessage('rsp',msg.MessageType,evargs.Response);
                         end
                         e.Response=rmsg.ToNetObject();
+                        
                     else
                         obj.NotifyError(id,emsg);
+                        e.Response=[];
                         e.ReleaseAsynchroniusEvent();
                         %obj.NotifyError(id,emsg);
                         return;
                     end
                     
+                    % release the event.
                     e.ReleaseAsynchroniusEvent();
-                    
                     if(haswarning)
                         pause(0.1);
                         obj.NotifyWarning(id,emsg);
                     end
                 else
+                    % release stright aways since done.
+                    e.ReleaseAsynchroniusEvent();
                     if(haserror)
                         obj.NotifyError(id,emsg);
                     elseif(haswarning)
@@ -233,6 +240,7 @@ classdef CSCom < Expose.Core.ExposeCOM
                     end
                 end
             catch err
+                e.ReleaseAsynchroniusEvent();
                 % send the error back to the server.
                 obj.NotifyError(id,err.message);
                 % warn about the error.

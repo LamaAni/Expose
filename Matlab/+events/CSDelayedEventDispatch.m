@@ -38,8 +38,15 @@ classdef CSDelayedEventDispatch < handle
     
     methods (Access = private)
         function onNetReady(obj,s,e)
-            
-            obj.notify('Ready', events.CSDelayedEventDispatchEventArgs(e.Value));
+            try
+                val=[];
+                if(~isempty(e))
+                    val=e.Value;
+                end
+                obj.notify('Ready', events.CSDelayedEventDispatchEventArgs(val));
+            catch err
+                warning(err);
+            end
         end
     end
         

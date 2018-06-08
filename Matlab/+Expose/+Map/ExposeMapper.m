@@ -126,7 +126,6 @@ classdef ExposeMapper < handle
             [o,wasUpdated]=Expose.Map.ExposeMapper.updateByPath(o,nameparts,val,1);
         end
         
-        
         % search and find the value id exists.
         function [val,hasval]=getValueFromNamepath(o,namepath,to)
             hasval=0;

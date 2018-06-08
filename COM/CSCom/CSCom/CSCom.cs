@@ -22,27 +22,9 @@ namespace CSCom
             Pipe = new WebsocketPipe<NPMessage>(new Uri(comServiceAddress));
             Pipe.Timeout = 30000;
 
-            Pipe.LogMethod = (id,s) =>
-            {
-                CallLogEvent(id,s);
-            };
-
-            Pipe.MessageRecived += (s, e) =>
-            {
-                if (this.MessageRecived != null)
-                    this.MessageRecived(this, e);
-
-                if(this.ASynchroniusEventExecution && e.RequiresResponse)
-                {
-                    e.WaitForAsynchroniusEvent(true, ASynchroniusEventExecutionTimeout);
-                }
-            };
-
-            Pipe.Close += (s, e) =>
-            {
-                SendCloseMessage(e.WebsocketID);
-            };
+            BindMessageHandling();
         }
+
 
         private void CallLogEvent(string websocketID, string s)
         {
@@ -60,19 +42,6 @@ namespace CSCom
             catch { }
         }
 
-        /// <summary>
-        /// Sends a close message to the handler.
-        /// </summary>
-        /// <param name="hndlId">If empty close all handlers</param>
-        private void SendCloseMessage(string hndlId = "")
-        {
-            if (this.MessageRecived == null)
-                return;
-
-            // Call the close message.
-            this.MessageRecived(this, new WebsocketPipe<NPMessage>.MessageEventArgs(new NPMessage(NPMessageType.Destroy, null, null)
-                , false, hndlId));
-        }
 
         #region Properties
 
@@ -124,14 +93,24 @@ namespace CSCom
         /// <summary>
         /// True if a server
         /// </summary>
-        public bool IsServer { get { return Pipe != null && Pipe.WSServer != null; } }
+        public bool IsServer { get { return Pipe.IsListening; } }
 
         /// <summary>
-        /// True if the current executing framework dose asynchronius event execution.
+        /// True if the current executing framework executes event asynchronically.
         /// This will affect the wait when requiring a response.
         /// </summary>
-        public bool ASynchroniusEventExecution { get; set; } = false;
+        public bool RequiresAsyncEventLock { get; set; } = false;
 
+        /// <summary>
+        /// All events that require a response are executed by the order they arrive. In a single threaded api, this might cause a
+        /// callback lock! A->B->A.
+        /// </summary>
+        public bool SingleThreadedResponseExecution { get; set; } = true;
+
+        /// <summary>
+        /// The max response stack size.
+        /// </summary>
+        public int SingleThreadedResponseExecutionMaxStackSize { get; set; } = 100;
 
         int? m_ASynchroniusEventExecutionTimeout = null;
         /// <summary>
@@ -172,6 +151,151 @@ namespace CSCom
             {
                 return Pipe.PipeID;
             }
+        }
+
+        #endregion
+
+        #region Messages and message handling
+
+        void BindMessageHandling()
+        {
+            Pipe.LogMethod = (id, s) =>
+            {
+                CallLogEvent(id, s);
+            };
+
+            Pipe.MessageRecived += (s, e) =>
+            {
+                ProcessMessage(e);
+            };
+
+            Pipe.Close += (s, e) =>
+            {
+                SendCloseMessage(e.WebsocketID);
+            };
+
+            Pipe.Error += (s, e) =>
+            {
+                SendErrorMessage(e.WebsocketID, e.Error);
+            };
+        }
+
+        /// <summary>
+        /// Sends a close message to the handler.
+        /// </summary>
+        /// <param name="hndlId">If empty close all handlers</param>
+        private void SendCloseMessage(string hndlId = "")
+        {
+            if (this.MessageRecived == null)
+                return;
+
+            // Call the close message.
+            this.MessageRecived(this, new WebsocketPipe<NPMessage>.MessageEventArgs(new NPMessage(NPMessageType.Destroy, null, null)
+                , false, hndlId));
+        }
+
+        private void SendErrorMessage(string id, Exception ex)
+        {
+            MessageRecived(this,
+                new WebsocketPipe<NPMessage>.MessageEventArgs(NPMessage.FromValue(ex.ToString(), NPMessageType.Error, ex.ToString()), false, id));
+        }
+
+        Dictionary<string, Queue<WebsocketPipe<NPMessage>.MessageEventArgs>> m_pendingResponseMessagesByID =
+            new Dictionary<string, Queue<WebsocketPipe<NPMessage>.MessageEventArgs>>();
+
+        /// <summary>
+        /// Called to process a message
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="waitingForAsyncEvents"></param>
+        private void ProcessMessage(WebsocketPipe<NPMessage>.MessageEventArgs e)
+        {
+            if (this.MessageRecived == null)
+                return;
+
+            if (!e.RequiresResponse)
+            {
+                this.MessageRecived(this, e);
+                return;
+            }
+
+            string wsid = e.WebsocketID;
+
+            if (!SingleThreadedResponseExecution)
+            {
+                try
+                {
+                    this.MessageRecived(this, e);
+                }
+                catch (Exception ex)
+                {
+                    SendErrorMessage(wsid, ex);
+                }
+                finally
+                {
+                    if (RequiresAsyncEventLock)
+                        e.WaitForAsynchroniusEvent(true, ASynchroniusEventExecutionTimeout);
+                }
+                return;
+            }
+
+            if (m_pendingResponseMessagesByID.ContainsKey(wsid))
+            {
+                // push to end and return.
+                if (m_pendingResponseMessagesByID[wsid].Count > SingleThreadedResponseExecutionMaxStackSize)
+                    throw new StackOverflowException("Reached the maximal number of pending requests that require a response.");
+
+                m_pendingResponseMessagesByID[wsid].Enqueue(e);
+                return;
+            }
+            
+            m_pendingResponseMessagesByID[wsid] = new Queue<WebsocketPipe<NPMessage>.MessageEventArgs>();
+            m_pendingResponseMessagesByID[wsid].Enqueue(e);
+
+            while(m_pendingResponseMessagesByID[wsid].Count>0)
+            {
+                e = m_pendingResponseMessagesByID[wsid].Dequeue();
+                try
+                {
+                    this.MessageRecived(this, e);
+                }
+                catch (Exception ex)
+                {
+                    SendErrorMessage(wsid, ex);
+                }
+                finally
+                {
+                    if (RequiresAsyncEventLock)
+                    {
+                        e.WaitForAsynchroniusEvent(true, ASynchroniusEventExecutionTimeout);
+                    }
+                }
+            }
+
+            lock (m_pendingResponseMessagesByID)
+            {
+                m_pendingResponseMessagesByID.Remove(wsid);
+            }
+
+            //if (this.RequiresAsyncEventLock)
+            //{
+            //    if (waitingForAsyncEvents.ContainsKey(e.WebsocketID))
+            //    {
+            //        var lastEv = waitingForAsyncEvents[e.WebsocketID];
+            //        throw new Exception("Called handler " + e.WebsocketID + " to wait for async events though already waiting for async event." +
+            //            " \nPending message: " + (lastEv.Message != null ? lastEv.Message.ToString() : "[none]") +
+            //            " \nCurrent message: " + (e.Message != null ? e.Message.ToString() : "[none]"));
+            //    }
+            //    waitingForAsyncEvents[e.WebsocketID] = e;
+            //}
+            //if (this.MessageRecived != null)
+            //    this.MessageRecived(this, e);
+
+            //if (this.RequiresAsyncEventLock)
+            //{
+            //    e.WaitForAsynchroniusEvent(true, ASynchroniusEventExecutionTimeout);
+            //    waitingForAsyncEvents.Remove(e.WebsocketID);
+            //}
         }
 
         #endregion
@@ -360,7 +484,6 @@ namespace CSCom
 
         #endregion
 
-
         #region Static Methods
 
         /// <summary>
@@ -368,7 +491,8 @@ namespace CSCom
         /// </summary>
         public static void CollectGarbage()
         {
-            GC.Collect(0);
+            // Force garbage collection.
+            GC.Collect();
         }
 
         public void LogNetInfo()
@@ -383,6 +507,54 @@ namespace CSCom
         {
             return o.GetType().ToString();
         }
+
+        /// <summary>
+        /// Make a cscom object inside the C# env. (Labview?)
+        /// </summary>
+        /// <param name="comServiceAddress"></param>
+        /// <returns></returns>
+        public static CSCom Make(string comServiceAddress = "ws://localhost:50000/CSCom")
+        {
+            CSCom co = new CSCom(comServiceAddress);
+            return co;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        static Dictionary<string, CSCom> sm_StaticRefrences = new Dictionary<string, CSCom>();
+
+        /// <summary>
+        /// Registeres a static refrence to id, to allow for the static refrences to be created.
+        /// </summary>
+        /// <param name="refrenceID"></param>
+        /// <param name="com"></param>
+        public static void RetisterStaticRefrenceToID(string refrenceID, CSCom com)
+        {
+            DestroyStaticRefrenceById(refrenceID);
+            sm_StaticRefrences[refrenceID] = com;
+        }
+
+        /// <summary>
+        /// Destroy the static refrence and close all connections.
+        /// </summary>
+        /// <param name="refrenceID"></param>
+        public static void DestroyStaticRefrenceById(string refrenceID)
+        {
+            if (!sm_StaticRefrences.ContainsKey(refrenceID))
+                return;
+
+            CSCom com = sm_StaticRefrences[refrenceID];
+            sm_StaticRefrences.Remove(refrenceID);
+
+            // send the destroy command.
+            if (com.IsAlive)
+            {
+                com.Send(NPMessage.FromValue(null, NPMessageType.Destroy));
+                com.Stop();
+            }
+        }
+
         #endregion
     }
 }

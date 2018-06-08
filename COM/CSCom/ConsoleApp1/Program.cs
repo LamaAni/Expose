@@ -10,8 +10,7 @@ namespace Tester
 {
     class Program
     {
-        static int WaitAtServer = 1000;
-        static int WaitAtClient = 400;
+        static int WaitAtServer = 1;
         static void Main(string[] args)
         {
             bool doSelfServer = true;
@@ -38,7 +37,6 @@ namespace Tester
             client.DoWebsocketLogging = false;
             client.Connect(true);
             client.MessageRecived += Clinet_MessageRecived;
-            //System.Threading.Thread.Sleep(300);
             
             if(client.IsAlive)
             {
