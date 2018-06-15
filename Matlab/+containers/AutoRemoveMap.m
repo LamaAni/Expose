@@ -145,6 +145,10 @@ classdef AutoRemoveMap < handle
                 col.setAccessed(id);
             end
         end
+        
+        function keepAlive(col,id)
+            col.contains(id);
+        end
     end
     
     methods (Static)

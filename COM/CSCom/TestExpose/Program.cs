@@ -16,6 +16,7 @@ namespace TestExpose
         static int SilentSetModeCount = 0;
         static int WaitOnMessageRecived = 400;
 
+        [STAThread]
         static void Main(string[] args)
         {
             // starting the menu.
@@ -422,6 +423,16 @@ namespace TestExpose
                      Console.WriteLine(errored + " errors found.");
 
                      queue.Dispose();
+                 })
+                 .Add("Open matlab file",()=>
+                 {
+                     System.Windows.Forms.OpenFileDialog ofd = new System.Windows.Forms.OpenFileDialog();
+                     ofd.Filter = "Matlab Files|*.m";
+                     if(ofd.ShowDialog()== System.Windows.Forms.DialogResult.OK)
+                     {
+                         CSCom.CSCom.OpenMatlabFile(ofd.FileName);
+                     }
+                     
                  });
 
 

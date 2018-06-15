@@ -178,6 +178,12 @@ namespace CSCom
             {
                 SendErrorMessage(e.WebsocketID, e.Error);
             };
+
+            Pipe.Ping += (s, e) =>
+            {
+                if (Ping != null)
+                    Ping(this, new PingEventArgs(e.WebsocketID));
+            };
         }
 
         /// <summary>
@@ -318,9 +324,27 @@ namespace CSCom
         }
 
         /// <summary>
+        /// The log event args.
+        /// </summary>
+        public class PingEventArgs : EventArgs
+        {
+            public PingEventArgs(string websocketID)
+            {
+                WebsocketID = websocketID;
+            }
+
+            public string WebsocketID { get; private set; }
+        }
+
+        /// <summary>
         /// Called on a log event.
         /// </summary>
         public event EventHandler<LogEventArgs> Log;
+
+        /// <summary>
+        /// Called on a log event.
+        /// </summary>
+        public event EventHandler<PingEventArgs> Ping;
 
         /// <summary>
         /// Called when a message is recived.
@@ -493,6 +517,26 @@ namespace CSCom
         {
             // Force garbage collection.
             GC.Collect();
+        }
+
+        public static void OpenMatlabFile(string fname)
+        {
+            if (!System.IO.File.Exists(fname))
+                throw new Exception("File dose not exist");
+            Task t = new Task(() =>
+              {
+                  System.Diagnostics.Process.Start(fname);
+              });
+            
+            try
+            {
+                t.Start();
+                t.Wait(10000);
+            }
+            catch(Exception ex)
+            {
+                throw ex;
+            }
         }
 
         public void LogNetInfo()

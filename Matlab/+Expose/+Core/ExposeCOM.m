@@ -3,6 +3,7 @@ classdef ExposeCOM<handle
     %com connecton.
     events
         Log;
+        Ping;
         MessageRecived;
     end
     

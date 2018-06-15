@@ -35,6 +35,7 @@ classdef CSCom < Expose.Core.ExposeCOM
             obj.NetO.RequiresAsyncEventLock=true;
             %obj.NetO.ASynchroniusEventExecutionTimeout=obj.ComEventTimeout;
             obj.NetO.addlistener('Log',@obj.onLog);
+            obj.NetO.addlistener('Ping',@obj.onPing);
             obj.NetO.addlistener('MessageRecived',@obj.onMessage);            
         end
         
@@ -173,6 +174,12 @@ classdef CSCom < Expose.Core.ExposeCOM
             if(obj.TraceLogs)
                 disp(msg);
             end
+        end
+        
+        function onPing(obj,s,e)
+            import Expose.Core.*;
+            callerID=Expose.CSCom.CSCom.NetValueToRawData(e.WebsocketID);
+            obj.notify('Ping',Expose.Core.ExposeLogEventStruct(callerID,''));
         end
         
         function onMessage(obj,s,e)

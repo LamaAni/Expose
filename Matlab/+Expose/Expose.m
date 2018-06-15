@@ -13,6 +13,7 @@ classdef Expose < handle
             obj.Com=com;
             com.addlistener('MessageRecived',@obj.onMessage);
             com.addlistener('Log',@obj.onLog);
+            com.addlistener('Ping',@obj.onPing);
             obj.asyncUpdateEventDispatch=events.CSDelayedEventDispatch();
             obj.asyncUpdateEventDispatch.addlistener('Ready',...
                 @obj.onAsyncUpdateEventDispatchReady);
@@ -79,6 +80,16 @@ classdef Expose < handle
             if(~isvalid(obj)||obj.TraceLogs)
                 disp(e.Message);
             end
+        end
+        
+        function onPing(obj,s,e)
+            % call to get the handler since we are logging.
+            if(~isvalid(obj))
+                return;
+            end
+            
+            % keep alive.
+            obj.Ping(obj.GetHandler(e.CallerID,e));
         end
         
         function onMessage(obj,s,e)
@@ -153,6 +164,9 @@ classdef Expose < handle
         end
         
         function DestroyHandler(obj,id,e)
+        end
+        
+        function Ping(obj,hndl)
         end
     end
     
