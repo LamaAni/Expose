@@ -12,6 +12,7 @@ classdef CSDelayedEventDispatch < handle
             end
             
             obj.NetO=CSCom.DelayedEventDispatch();
+            obj.NetO.UseThreadLock=true;
             obj.NetO.addlistener('Ready',@obj.onNetReady);
         end
     end
@@ -26,8 +27,8 @@ classdef CSDelayedEventDispatch < handle
     
     methods
         function trigger(obj,delay,val)
-            if(~exist('delay','var'))
-                delay=0;
+            if(~exist('delay','var')||~isnumeric(delay))
+                delay=1;
             end
             if(~exist('val','var'))
                 val=[];
@@ -47,6 +48,8 @@ classdef CSDelayedEventDispatch < handle
             catch err
                 warning(err);
             end
+            
+            obj.NetO.EventReadyComplete();
         end
     end
         

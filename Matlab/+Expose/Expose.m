@@ -245,7 +245,7 @@ classdef Expose < handle
                     conc(end+1:end+length(name))=name;
                     exp.pendingUpdates(toID)=conc;
                 end
-                exp.asyncUpdateEventDispatch.trigger(1);
+                exp.asyncUpdateEventDispatch.trigger(50);
                 return;
             end
 

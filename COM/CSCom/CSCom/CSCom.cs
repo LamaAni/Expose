@@ -196,7 +196,7 @@ namespace CSCom
                 return;
 
             // Call the close message.
-            this.MessageRecived(this, new WebsocketPipe<NPMessage>.MessageEventArgs(new NPMessage(NPMessageType.Destroy, null, null)
+            this.MessageRecived(this, new WebsocketPipe<NPMessage>.MessageEventArgs(new NPMessage(NPMessageType.Destroy, null, "Close message")
                 , false, hndlId));
         }
 
@@ -594,7 +594,7 @@ namespace CSCom
             // send the destroy command.
             if (com.IsAlive)
             {
-                com.Send(NPMessage.FromValue(null, NPMessageType.Destroy));
+                com.Send(NPMessage.FromValue(null, NPMessageType.Destroy, "C# static refrence destoryed."));
                 com.Stop();
             }
         }

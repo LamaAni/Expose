@@ -177,6 +177,25 @@ namespace TestExpose
                           }
                       }
                   })
+                  .Add("Test multiple connection clients",()=>
+                  {
+                      var clientA = new CSCom.CSCom();
+                      var clientB = new CSCom.CSCom();
+                      clientA.Connect();
+                      Console.WriteLine("Connected client A.");
+                      clientB.Connect();
+                      Console.WriteLine("Connected client B.");
+                      clientA.Send(NPMessage.FromValue(new byte[200]),true);
+                      Console.WriteLine("Send client a ok.");
+                      clientB.Send(NPMessage.FromValue(new byte[200]),true);
+                      Console.WriteLine("Send client b ok.");
+
+                      Console.WriteLine("Press any key to disconnect...");
+                      Console.ReadKey();
+
+                      clientA.Stop();
+                      clientB.Stop();
+                  })
                  .Add("Test websocket client server", () =>
                  {
                      Console.WriteLine("Client server test");
@@ -433,6 +452,28 @@ namespace TestExpose
                          CSCom.CSCom.OpenMatlabFile(ofd.FileName);
                      }
                      
+                 })
+                 .Add("Test event dispatch",()=> {
+                     var last = DateTime.Now;
+                     int delay = 1000;
+                     DelayedEventDispatch dispatch = new DelayedEventDispatch();
+                     dispatch.Ready += (s, e) =>
+                     {
+                         DateTime now = DateTime.Now;
+                         if ((now - last).TotalMilliseconds < delay)
+                             Console.WriteLine("Dispatch error.");
+                         else Console.WriteLine("Dispatch");
+                         last = now;
+                     };
+
+                     for(int i=0;i<10000;i++)
+                     {
+                         dispatch.Trigger(delay);
+                         if (i % 2==0)
+                             System.Threading.Thread.Sleep(1);
+                     }
+
+                     Console.WriteLine("ok");
                  });
 
 
